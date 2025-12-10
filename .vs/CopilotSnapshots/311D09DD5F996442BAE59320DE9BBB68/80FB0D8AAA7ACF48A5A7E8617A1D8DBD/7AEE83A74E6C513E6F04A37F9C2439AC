@@ -1,0 +1,76 @@
+﻿using System.Numerics;
+using VPP.Core.Attributes;
+using VPP.Core.Models;
+using VPP.Plugins.PointCloud.Models;
+using ExecutionContext = VPP.Core.Models.ExecutionContext;
+
+namespace VPP.Plugins.PointCloud.Nodes;
+
+[NodeInfo("Rigid Transform", "Point Cloud/Transform", "Apply rotation + translation to point cloud")]
+public class RigidTransformNode : NodeBase
+{
+    public RigidTransformNode()
+    {
+        // Rotation (degrees)
+        AddParameter<float>("RotX", 0f, required:false, displayName:"Rotate X", description:"Rotation about X axis in degrees");
+        AddParameter<float>("RotY", 0f, required:false, displayName:"Rotate Y", description:"Rotation about Y axis in degrees");
+        AddParameter<float>("RotZ", 0f, required:false, displayName:"Rotate Z", description:"Rotation about Z axis in degrees");
+        // Translation
+        AddParameter<float>("TransX", 0f, required:false, displayName:"Translate X", description:"Translation along X");
+        AddParameter<float>("TransY", 0f, required:false, displayName:"Translate Y", description:"Translation along Y");
+        AddParameter<float>("TransZ", 0f, required:false, displayName:"Translate Z", description:"Translation along Z");
+    }
+
+    protected override Task ExecuteCoreAsync(ExecutionContext context, CancellationToken cancellationToken)
+    {
+        // Get original point cloud (prefer filtered if present)
+        var source = context.Get<PointCloudData>(ExecutionContext.FilteredCloudKey) ??
+                     context.Get<PointCloudData>(ExecutionContext.PointCloudKey);
+        if (source == null || source.Points.Count == 0)
+            return Task.CompletedTask; // Nothing to do
+
+        // Build rotation (convert degrees to radians)
+        var rx = MathF.PI / 180f * GetParameter<float>("RotX");
+        var ry = MathF.PI / 180f * GetParameter<float>("RotY");
+        var rz = MathF.PI / 180f * GetParameter<float>("RotZ");
+
+        var trans = new Vector3(
+            GetParameter<float>("TransX"),
+            GetParameter<float>("TransY"),
+            GetParameter<float>("TransZ"));
+
+        // Compose rotation matrix (Rz * Ry * Rx)
+        var cx = MathF.Cos(rx); var sx = MathF.Sin(rx);
+        var cy = MathF.Cos(ry); var sy = MathF.Sin(ry);
+        var cz = MathF.Cos(rz); var sz = MathF.Sin(rz);
+
+        // 3x3 rotation
+        var r00 = cz*cy;
+        var r01 = cz*sy*sx - sz*cx;
+        var r02 = cz*sy*cx + sz*sx;
+
+        var r10 = sz*cy;
+        var r11 = sz*sy*sx + cz*cx;
+        var r12 = sz*sy*cx - cz*sx;
+
+        var r20 = -sy;
+        var r21 = cy*sx;
+        var r22 = cy*cx;
+
+        var result = source.Clone();
+        for (int i=0;i<result.Points.Count;i++)
+        {
+            var p = result.Points[i];
+            var rp = new Vector3(
+                r00*p.X + r01*p.Y + r02*p.Z,
+                r10*p.X + r11*p.Y + r12*p.Z,
+                r20*p.X + r21*p.Y + r22*p.Z);
+            result.Points[i] = rp + trans;
+        }
+        result.ComputeBoundingBox();
+
+        // Store as filtered cloud so viewer picks it up
+        context.Set(ExecutionContext.FilteredCloudKey, result);
+        return Task.CompletedTask;
+    }
+}

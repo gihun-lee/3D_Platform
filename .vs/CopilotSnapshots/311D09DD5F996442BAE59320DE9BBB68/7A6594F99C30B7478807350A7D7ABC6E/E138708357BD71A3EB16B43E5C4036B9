@@ -1,0 +1,399 @@
+﻿using System.Collections.ObjectModel;
+using System.Windows.Media.Media3D;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
+using VPP.Core.Engine;
+using VPP.Core.Interfaces;
+using VPP.Core.Models;
+using VPP.Core.Services;
+using VPP.Plugins.PointCloud;
+using VPP.Plugins.PointCloud.Models;
+
+namespace VPP.App.ViewModels;
+
+public partial class MainViewModel : ObservableObject
+{
+    private readonly PluginService _pluginService;
+    private readonly ExecutionEngine _executionEngine;
+    private VPP.Core.Models.ExecutionContext? _lastExecutionContext;
+
+    [ObservableProperty] private NodeGraph _graph = new();
+    [ObservableProperty] private ObservableCollection<NodeViewModel> _nodes = new();
+    [ObservableProperty] private ObservableCollection<ConnectionViewModel> _connections = new();
+    [ObservableProperty] private ObservableCollection<string> _availableNodes = new();
+    [ObservableProperty] private string _selectedNodeType = "";
+    [ObservableProperty] private NodeViewModel? _selectedNode;
+    [ObservableProperty] private string _statusMessage = "Ready";
+    [ObservableProperty] private bool _isExecuting;
+    [ObservableProperty] private Point3DCollection _pointCloudPoints = new();
+    [ObservableProperty] private string _inspectionResult = "";
+    [ObservableProperty] private bool _inspectionPass;
+    [ObservableProperty] private double _detectedRadius;
+    [ObservableProperty] private Point3D _detectedCenter;
+    [ObservableProperty] private string _nodeSearchText = "";
+    [ObservableProperty] private ObservableCollection<string> _filteredNodes = new();
+
+    public MainViewModel()
+    {
+        _pluginService = new PluginService();
+        _executionEngine = new ExecutionEngine();
+
+        // Load built-in plugins
+        _pluginService.LoadFromAssembly(typeof(PointCloudPlugin).Assembly);
+
+        // Populate available nodes
+        foreach (var (name, category, _) in _pluginService.GetAvailableNodes())
+        {
+            AvailableNodes.Add($"{category}/{name}");
+        }
+
+        _executionEngine.NodeExecuting += (s, e) =>
+            StatusMessage = $"Executing: {e.Node.Name}";
+        _executionEngine.NodeExecuted += (s, e) =>
+        {
+            StatusMessage = e.Result?.Success == true ? $"Completed: {e.Node.Name}" : $"Failed: {e.Node.Name}";
+            // Realtime visualization update after each node execution
+            UpdateVisualization();
+        };
+    }
+
+    [RelayCommand]
+    private void AddNode()
+    {
+        if (string.IsNullOrEmpty(SelectedNodeType)) return;
+
+        var nodeName = SelectedNodeType.Split('/').Last();
+        var node = _pluginService.CreateNode(nodeName);
+        if (node == null) return;
+
+        if (node is NodeBase nb)
+        {
+            nb.X = 100 + Nodes.Count * 200;
+            nb.Y = 100;
+        }
+
+        Graph.AddNode(node);
+        Nodes.Add(new NodeViewModel(node));
+        StatusMessage = $"Added node: {node.Name}";
+    }
+
+    [RelayCommand]
+    private async Task ExecuteGraph()
+    {
+        if (IsExecuting) return;
+        IsExecuting = true;
+        StatusMessage = "Executing graph...";
+
+        try
+        {
+            var result = await _executionEngine.ExecuteAsync(Graph);
+
+            if (result.Success)
+            {
+                _lastExecutionContext = result.Context;
+                StatusMessage = "Execution completed successfully";
+                UpdateVisualization();
+            }
+            else
+            {
+                var failedNode = result.NodeResults.FirstOrDefault(r => !r.Value.Success);
+                StatusMessage = $"Execution failed: {failedNode.Value?.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsExecuting = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadPointCloud()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Point Cloud Files|*.ply;*.pcd;*.xyz;*.csv;*.txt|All Files|*.*",
+            Title = "Select Point Cloud File"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            // Find import node and set file path parameter
+            var importNode = Graph.Nodes.FirstOrDefault(n => n.Name == "Import Point Cloud");
+            if (importNode != null)
+            {
+                var pathParam = importNode.Parameters.FirstOrDefault(p => p.Name == "FilePath");
+                if (pathParam != null)
+                    pathParam.Value = dialog.FileName;
+                StatusMessage = $"Loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
+
+                // Auto-execute to display the point cloud
+                await ExecuteGraph();
+            }
+            else
+            {
+                StatusMessage = "Add 'Import Point Cloud' node first";
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void CreateDefaultWorkflow()
+    {
+        // Clear existing
+        Graph = new NodeGraph();
+        Nodes.Clear();
+        Connections.Clear();
+
+        // Create workflow: Import -> ROI -> Circle Detection -> Inspection
+        var importNode = _pluginService.CreateNode("Import Point Cloud") as NodeBase;
+        var roiDrawNode = _pluginService.CreateNode("ROI Draw") as NodeBase;
+        var roiFilterNode = _pluginService.CreateNode("ROI Filter") as NodeBase;
+        var circleNode = _pluginService.CreateNode("Circle Detection") as NodeBase;
+        var inspectNode = _pluginService.CreateNode("Spec Inspection") as NodeBase;
+
+        if (importNode == null || roiDrawNode == null || roiFilterNode == null ||
+            circleNode == null || inspectNode == null) return;
+
+        // Position nodes
+        importNode.X = 50; importNode.Y = 150;
+        roiDrawNode.X = 50; roiDrawNode.Y = 350;
+        roiFilterNode.X = 300; roiFilterNode.Y = 200;
+        circleNode.X = 550; circleNode.Y = 200;
+        inspectNode.X = 800; inspectNode.Y = 200;
+
+        // Set default parameter values
+        roiDrawNode.Parameters.First(p => p.Name == "SizeX").Value = 100f;
+        roiDrawNode.Parameters.First(p => p.Name == "SizeY").Value = 100f;
+        roiDrawNode.Parameters.First(p => p.Name == "SizeZ").Value = 50f;
+
+        inspectNode.Parameters.First(p => p.Name == "RadiusMin").Value = 5f;
+        inspectNode.Parameters.First(p => p.Name == "RadiusMax").Value = 15f;
+
+        // Add to graph
+        Graph.AddNode(importNode);
+        Graph.AddNode(roiDrawNode);
+        Graph.AddNode(roiFilterNode);
+        Graph.AddNode(circleNode);
+        Graph.AddNode(inspectNode);
+
+        // Connect nodes (simple execution order)
+        Graph.Connect(importNode, roiFilterNode);
+        Graph.Connect(importNode, circleNode);
+        Graph.Connect(roiFilterNode, circleNode);
+        Graph.Connect(circleNode, inspectNode);
+
+        // Create view models
+        var importNodeVm = new NodeViewModel(importNode);
+        var roiDrawNodeVm = new NodeViewModel(roiDrawNode);
+        var roiFilterNodeVm = new NodeViewModel(roiFilterNode);
+        var circleNodeVm = new NodeViewModel(circleNode);
+        var inspectNodeVm = new NodeViewModel(inspectNode);
+
+        Nodes.Add(importNodeVm);
+        Nodes.Add(roiDrawNodeVm);
+        Nodes.Add(roiFilterNodeVm);
+        Nodes.Add(circleNodeVm);
+        Nodes.Add(inspectNodeVm);
+
+        // Create connection view models with proper references
+        var nodeVmMap = Nodes.ToDictionary(n => n.Node.Id, n => n);
+        foreach (var conn in Graph.Connections)
+        {
+            var sourceVm = nodeVmMap[conn.SourceNodeId];
+            var targetVm = nodeVmMap[conn.TargetNodeId];
+            Connections.Add(new ConnectionViewModel(conn, Graph, sourceVm, targetVm));
+        }
+
+        StatusMessage = "Created default workflow";
+    }
+
+    private void UpdateVisualization()
+    {
+        if (_lastExecutionContext == null) return;
+
+        // Auto-Render: Get point cloud from ExecutionContext
+        // Prefer filtered cloud, fall back to original
+        var cloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.FilteredCloudKey)
+                    ?? _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+
+        if (cloud != null && cloud.Points.Count > 0)
+        {
+            // Create new collection to avoid slow individual adds
+            var newPoints = new Point3DCollection(cloud.Points.Count);
+
+            // For very large point clouds, downsample for display
+            var step = cloud.Points.Count > 1000000 ? cloud.Points.Count / 1000000 : 1;
+            var displayCount = 0;
+
+            for (int i = 0; i < cloud.Points.Count; i += step)
+            {
+                var pt = cloud.Points[i];
+                newPoints.Add(new Point3D(pt.X, pt.Y, pt.Z));
+                displayCount++;
+            }
+
+            PointCloudPoints = newPoints;
+            StatusMessage = step > 1
+                ? $"Displaying {displayCount:N0} of {cloud.Points.Count:N0} points (downsampled)"
+                : $"Displaying {cloud.Points.Count:N0} points";
+        }
+
+        // Get inspection result from context
+        if (_lastExecutionContext.TryGet<InspectionResult>("InspectionResult", out var inspectionResult))
+        {
+            InspectionPass = inspectionResult.Pass;
+            InspectionResult = inspectionResult.Message;
+        }
+
+        // Get circle detection result from context
+        var circle = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+        if (circle != null)
+        {
+            DetectedRadius = circle.Radius;
+            DetectedCenter = new Point3D(circle.Center.X, circle.Center.Y, circle.Center.Z);
+        }
+    }
+
+    public void UpdateFilteredNodes()
+    {
+        FilteredNodes.Clear();
+        var search = NodeSearchText?.ToLower() ?? "";
+
+        foreach (var node in AvailableNodes)
+        {
+            if (string.IsNullOrEmpty(search) || node.ToLower().Contains(search))
+            {
+                FilteredNodes.Add(node);
+            }
+        }
+    }
+
+    public void AddNodeAtPosition(string nodeType, double x, double y)
+    {
+        var nodeName = nodeType.Split('/').Last();
+        var node = _pluginService.CreateNode(nodeName);
+        if (node == null) return;
+
+        if (node is NodeBase nb)
+        {
+            nb.X = x;
+            nb.Y = y;
+        }
+
+        Graph.AddNode(node);
+        Nodes.Add(new NodeViewModel(node));
+        StatusMessage = $"Added node: {node.Name}";
+    }
+
+    public void CreateConnection(NodeViewModel sourceNodeVm, NodeViewModel targetNodeVm)
+    {
+        var sourceNode = sourceNodeVm.Node;
+        var targetNode = targetNodeVm.Node;
+
+        if (sourceNode == null || targetNode == null) return;
+
+        // Check if connection already exists
+        var existingConnection = Graph.Connections.FirstOrDefault(c =>
+            c.SourceNodeId == sourceNode.Id && c.TargetNodeId == targetNode.Id);
+
+        if (existingConnection != null) return;
+
+        // Create simple execution order connection
+        if (!Graph.Connect(sourceNode, targetNode)) return;
+
+        // Create visual connection
+        var connection = Graph.Connections.Last();
+        var connVm = new ConnectionViewModel(connection, sourceNodeVm, targetNodeVm);
+        Connections.Add(connVm);
+
+        StatusMessage = $"Connected {sourceNode.Name} -> {targetNode.Name}";
+    }
+
+    public void UpdateConnectionPositions()
+    {
+        foreach (var conn in Connections)
+        {
+            conn.UpdatePositions();
+        }
+    }
+}
+
+public partial class NodeViewModel : ObservableObject
+{
+    public INode Node { get; }
+
+    [ObservableProperty] private double _x;
+    [ObservableProperty] private double _y;
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private bool _isExecuting;
+
+    public string Name => Node.Name;
+    public string Category => Node.Category;
+
+    // New parameter-based system
+    public IReadOnlyList<IParameter> Parameters => Node.Parameters;
+
+    // Old port-based system (deprecated, for backward compatibility)
+    [Obsolete("Use Parameters instead")]
+    public IReadOnlyList<IPort> InputPorts => Node.InputPorts;
+    [Obsolete("Use Parameters instead")]
+    public IReadOnlyList<IPort> OutputPorts => Node.OutputPorts;
+
+    public NodeViewModel(INode node)
+    {
+        Node = node;
+        if (node is NodeBase nb)
+        {
+            X = nb.X;
+            Y = nb.Y;
+        }
+    }
+}
+
+public partial class ConnectionViewModel : ObservableObject
+{
+    public Connection Connection { get; }
+    private readonly NodeViewModel _sourceNodeVm;
+    private readonly NodeViewModel _targetNodeVm;
+
+    [ObservableProperty] private System.Windows.Point _startPoint;
+    [ObservableProperty] private System.Windows.Point _endPoint;
+    [ObservableProperty] private System.Windows.Point _controlPoint1;
+    [ObservableProperty] private System.Windows.Point _controlPoint2;
+
+    public ConnectionViewModel(Connection connection, NodeViewModel sourceNodeVm, NodeViewModel targetNodeVm)
+    {
+        Connection = connection;
+        _sourceNodeVm = sourceNodeVm;
+        _targetNodeVm = targetNodeVm;
+
+        UpdatePositions();
+    }
+
+    public void UpdatePositions()
+    {
+        if (_sourceNodeVm == null || _targetNodeVm == null) return;
+
+        const double nodeWidth = 150;
+        const double nodeHeight = 80;
+
+        // Simple connection from right side of source to left side of target
+        StartPoint = new System.Windows.Point(
+            _sourceNodeVm.X + nodeWidth,
+            _sourceNodeVm.Y + nodeHeight / 2);
+
+        EndPoint = new System.Windows.Point(
+            _targetNodeVm.X,
+            _targetNodeVm.Y + nodeHeight / 2);
+
+        // Calculate bezier control points for curved connection
+        var controlOffset = Math.Abs(EndPoint.X - StartPoint.X) / 2;
+        ControlPoint1 = new System.Windows.Point(StartPoint.X + controlOffset, StartPoint.Y);
+        ControlPoint2 = new System.Windows.Point(EndPoint.X - controlOffset, EndPoint.Y);
+    }
+}

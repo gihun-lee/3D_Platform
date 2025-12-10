@@ -1,0 +1,380 @@
+﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using VPP.App.ViewModels;
+using VPP.Core.Interfaces;
+
+namespace VPP.App.Views;
+
+public partial class MainWindow : Window
+{
+    private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    // Node dragging state
+    private bool _isDraggingNode;
+    private NodeViewModel? _draggedNode;
+    private System.Windows.Point _nodeStartPosition;
+    private System.Windows.Point _mouseStartPosition;
+
+    // Connection dragging state
+    private bool _isDraggingConnection;
+    private NodeViewModel? _connectionSourceNode;
+    private bool _isOutputPort; // true = dragging from output, false = from input
+    private System.Windows.Point _dragStartPoint;
+
+    // Connection deletion state
+    private ConnectionViewModel? _lastClickedConnection;
+    private DateTime _lastConnectionClickTime = DateTime.MinValue;
+    private const int DoubleClickMs = 300;
+
+    // Context menu position
+    private System.Windows.Point _contextMenuPosition;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+
+        NodeCanvas.MouseMove += NodeCanvas_MouseMove;
+        NodeCanvas.MouseLeftButtonUp += NodeCanvas_MouseLeftButtonUp;
+    }
+
+    #region Context Menu
+
+    private void NodeCanvas_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _contextMenuPosition = e.GetPosition(NodeCanvas);
+    }
+
+    private void AddNodeContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.NodeSearchText = "";
+            ViewModel.UpdateFilteredNodes();
+        }
+    }
+
+    private void NodeSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        ViewModel?.UpdateFilteredNodes();
+    }
+
+    private void NodeListBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            AddSelectedNode(sender as ListBox);
+    }
+
+    private void NodeListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox listBox && listBox.SelectedItem != null)
+            AddSelectedNode(listBox);
+    }
+
+    private void AddSelectedNode(ListBox? listBox)
+    {
+        if (listBox?.SelectedItem is string nodeType && ViewModel != null)
+        {
+            ViewModel.AddNodeAtPosition(nodeType, _contextMenuPosition.X, _contextMenuPosition.Y);
+            AddNodeContextMenu.IsOpen = false;
+        }
+    }
+
+    #endregion
+
+    #region Node Dragging (Header Only)
+
+    private void NodeHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border header && header.DataContext is NodeViewModel nodeVm)
+        {
+            // Double-click: delete node
+            if (e.ClickCount == 2)
+            {
+                ViewModel?.DeleteNode(nodeVm);
+                e.Handled = true;
+                return;
+            }
+
+            // Don't start dragging if clicking a button
+            if (e.OriginalSource is Button)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Start dragging the node
+            _isDraggingNode = true;
+            _draggedNode = nodeVm;
+            _nodeStartPosition = new System.Windows.Point(nodeVm.X, nodeVm.Y);
+            _mouseStartPosition = e.GetPosition(NodeCanvas);
+            header.CaptureMouse();
+            e.Handled = true;
+        }
+    }
+
+    private void FileSelectButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is NodeViewModel nodeVm)
+        {
+            if (nodeVm.Name == "Import Point Cloud")
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Filter = "Point Cloud Files|*.ply;*.pcd;*.xyz;*.csv;*.txt|All Files|*.*",
+                    Title = "Select Point Cloud File"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    var pathParam = nodeVm.Node.Parameters.FirstOrDefault(p => p.Name == "FilePath");
+                    if (pathParam != null)
+                    {
+                        pathParam.Value = dialog.FileName;
+
+                        if (ViewModel != null)
+                        {
+                            ViewModel.StatusMessage = $"Loading: {System.IO.Path.GetFileName(dialog.FileName)}";
+                            _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void NodeHeader_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isDraggingNode && _draggedNode != null && e.LeftButton == MouseButtonState.Pressed)
+        {
+            var currentPos = e.GetPosition(NodeCanvas);
+            var delta = currentPos - _mouseStartPosition;
+
+            _draggedNode.X = _nodeStartPosition.X + delta.X;
+            _draggedNode.Y = _nodeStartPosition.Y + delta.Y;
+
+            ViewModel?.UpdateConnectionPositions();
+            e.Handled = true;
+        }
+    }
+
+    private void NodeHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDraggingNode && sender is Border header)
+        {
+            _isDraggingNode = false;
+            _draggedNode = null;
+            header.ReleaseMouseCapture();
+            e.Handled = true;
+        }
+    }
+
+    #endregion
+
+    #region Port Connection Dragging
+
+    private void OutputPort_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Ellipse ellipse && ellipse.Tag is NodeViewModel nodeVm)
+        {
+            StartConnectionDrag(ellipse, nodeVm, true);
+            e.Handled = true;
+        }
+    }
+
+    private void InputPort_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Ellipse ellipse && ellipse.Tag is NodeViewModel nodeVm)
+        {
+            StartConnectionDrag(ellipse, nodeVm, false);
+            e.Handled = true;
+        }
+    }
+
+    private void StartConnectionDrag(Ellipse port, NodeViewModel nodeVm, bool isOutput)
+    {
+        _isDraggingConnection = true;
+        _connectionSourceNode = nodeVm;
+        _isOutputPort = isOutput;
+
+        var portCenter = port.TranslatePoint(new System.Windows.Point(6, 6), NodeCanvas);
+        _dragStartPoint = portCenter;
+
+        TempConnectionLine.Visibility = Visibility.Visible;
+        UpdateTempConnectionLine(portCenter);
+        // Removed NodeCanvas.CaptureMouse to allow MouseUp to reach target ellipse
+    }
+
+    private void Port_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDraggingConnection && sender is Ellipse ellipse && ellipse.Tag is NodeViewModel targetNodeVm)
+        {
+            // Determine if this is a valid connection
+            bool isTargetInput = !_isOutputPort;
+            
+            // Can only connect output -> input or input -> output
+            if (_connectionSourceNode != null && _connectionSourceNode != targetNodeVm)
+            {
+                NodeViewModel sourceNode, targetNode;
+                
+                if (_isOutputPort)
+                {
+                    // Dragging from output -> must connect to input
+                    sourceNode = _connectionSourceNode;
+                    targetNode = targetNodeVm;
+                }
+                else
+                {
+                    // Dragging from input -> must connect from output
+                    sourceNode = targetNodeVm;
+                    targetNode = _connectionSourceNode;
+                }
+
+                // Create the connection
+                ViewModel?.CreateConnection(sourceNode, targetNode);
+            }
+
+            EndConnectionDrag();
+            e.Handled = true;
+        }
+    }
+
+    private void NodeCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isDraggingConnection)
+        {
+            var currentPos = e.GetPosition(NodeCanvas);
+            UpdateTempConnectionLine(currentPos);
+        }
+    }
+
+    private void NodeCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDraggingConnection)
+        {
+            // Fallback: if user released over canvas (target ellipse didn't get MouseUp) perform hit test
+            var releasePoint = e.GetPosition(NodeCanvas);
+            TryConnectAtPoint(releasePoint);
+            EndConnectionDrag();
+        }
+    }
+
+    private void TryConnectAtPoint(Point point)
+    {
+        var hit = VisualTreeHelper.HitTest(NodeCanvas, point);
+        if (hit == null) return;
+
+        // Walk up visual tree to find an Ellipse with a NodeViewModel Tag
+        DependencyObject current = hit.VisualHit;
+        while (current != null && current is not Ellipse)
+        {
+            current = VisualTreeHelper.GetParent(current);
+        }
+        if (current is Ellipse ellipse && ellipse.Tag is NodeViewModel targetNodeVm && _connectionSourceNode != null && targetNodeVm != _connectionSourceNode)
+        {
+            // Determine if ellipse is input or output by fill color
+            var brush = ellipse.Fill as SolidColorBrush;
+            bool targetIsInput = brush != null && brush.Color == Color.FromRgb(0x4C, 0xAF, 0x50); // Green
+            bool targetIsOutput = brush != null && brush.Color == Color.FromRgb(0xFF, 0x98, 0x00); // Orange
+
+            NodeViewModel sourceNode;
+            NodeViewModel targetNode;
+            if (_isOutputPort && targetIsInput)
+            {
+                sourceNode = _connectionSourceNode;
+                targetNode = targetNodeVm;
+            }
+            else if (!_isOutputPort && targetIsOutput)
+            {
+                sourceNode = targetNodeVm;
+                targetNode = _connectionSourceNode;
+            }
+            else
+            {
+                return; // incompatible port types
+            }
+
+            ViewModel?.CreateConnection(sourceNode, targetNode);
+        }
+    }
+
+    private void UpdateTempConnectionLine(System.Windows.Point endPoint)
+    {
+        var geometry = new PathGeometry();
+        var figure = new PathFigure { StartPoint = _dragStartPoint };
+
+        // Create bezier curve
+        var dx = endPoint.X - _dragStartPoint.X;
+        var controlOffset = Math.Abs(dx) * 0.5;
+
+        var control1 = _isOutputPort
+            ? new System.Windows.Point(_dragStartPoint.X + controlOffset, _dragStartPoint.Y)
+            : new System.Windows.Point(_dragStartPoint.X - controlOffset, _dragStartPoint.Y);
+
+        var control2 = _isOutputPort
+            ? new System.Windows.Point(endPoint.X - controlOffset, endPoint.Y)
+            : new System.Windows.Point(endPoint.X + controlOffset, endPoint.Y);
+
+        figure.Segments.Add(new BezierSegment(control1, control2, endPoint, true));
+        geometry.Figures.Add(figure);
+        TempConnectionLine.Data = geometry;
+    }
+
+    private void EndConnectionDrag()
+    {
+        _isDraggingConnection = false;
+        _connectionSourceNode = null;
+        TempConnectionLine.Visibility = Visibility.Collapsed;
+        // Removed NodeCanvas.ReleaseMouseCapture
+    }
+
+    #region Connection Deletion (Double-Click)
+
+    private void Connection_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Path path && path.Tag is ConnectionViewModel connVm)
+        {
+            var now = DateTime.Now;
+            var timeSinceLastClick = (now - _lastConnectionClickTime).TotalMilliseconds;
+
+            if (_lastClickedConnection == connVm && timeSinceLastClick < DoubleClickMs)
+            {
+                // Double-click detected - delete connection
+                ViewModel?.DeleteConnection(connVm);
+                _lastClickedConnection = null;
+                _lastConnectionClickTime = DateTime.MinValue;
+            }
+            else
+            {
+                // First click
+                _lastClickedConnection = connVm;
+                _lastConnectionClickTime = now;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    #endregion
+
+    #region Obsolete Node Body Handlers (Keep for backward compatibility)
+
+    private void Node_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // No longer used - dragging now handled by header only
+    }
+
+    private void Node_MouseMove(object sender, MouseEventArgs e)
+    {
+        // No longer used - dragging now handled by header only
+    }
+
+    private void Node_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        // No longer used - dragging now handled by header only
+    }
+
+    #endregion
+}

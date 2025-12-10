@@ -1,0 +1,31 @@
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.deps.json
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.dll
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.pdb
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Core.dll
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Core.pdb
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.csproj.AssemblyReference.cache
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.AssemblyInfoInputs.cache
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.AssemblyInfo.cs
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.csproj.CoreCompileInputs.cache
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plug.D56F189E.Up2Date
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.dll
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\refint\VPP.Plugins.PointCloud.dll
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.pdb
+C:\Users\user\Downloads\practice-main (1)\practice-main\VisualProgrammingPlatform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\ref\VPP.Plugins.PointCloud.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.deps.json
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Plugins.PointCloud.pdb
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Core.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\bin\Debug\net8.0-windows\VPP.Core.pdb
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.csproj.AssemblyReference.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.AssemblyInfoInputs.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.AssemblyInfo.cs
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.csproj.CoreCompileInputs.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.sourcelink.json
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plug.D56F189E.Up2Date
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\refint\VPP.Plugins.PointCloud.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\VPP.Plugins.PointCloud.pdb
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Plugins.PointCloud\obj\Debug\net8.0-windows\ref\VPP.Plugins.PointCloud.dll

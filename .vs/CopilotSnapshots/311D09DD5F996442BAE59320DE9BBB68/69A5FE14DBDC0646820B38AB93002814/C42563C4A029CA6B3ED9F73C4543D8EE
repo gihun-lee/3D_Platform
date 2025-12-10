@@ -1,0 +1,69 @@
+﻿using System.Globalization;
+using System.Numerics;
+using System.Windows;
+
+namespace VPP.App.Views;
+
+public partial class MatrixEditWindow : Window
+{
+    public Matrix4x4 ResultMatrix { get; private set; }
+
+    public MatrixEditWindow(Matrix4x4 initial)
+    {
+        InitializeComponent();
+        SetFields(initial);
+    }
+
+    private void SetFields(Matrix4x4 m)
+    {
+        M11.Text = m.M11.ToString(CultureInfo.InvariantCulture); M12.Text = m.M12.ToString(CultureInfo.InvariantCulture); M13.Text = m.M13.ToString(CultureInfo.InvariantCulture); M14.Text = m.M14.ToString(CultureInfo.InvariantCulture);
+        M21.Text = m.M21.ToString(CultureInfo.InvariantCulture); M22.Text = m.M22.ToString(CultureInfo.InvariantCulture); M23.Text = m.M23.ToString(CultureInfo.InvariantCulture); M24.Text = m.M24.ToString(CultureInfo.InvariantCulture);
+        M31.Text = m.M31.ToString(CultureInfo.InvariantCulture); M32.Text = m.M32.ToString(CultureInfo.InvariantCulture); M33.Text = m.M33.ToString(CultureInfo.InvariantCulture); M34.Text = m.M34.ToString(CultureInfo.InvariantCulture);
+        M41.Text = m.M41.ToString(CultureInfo.InvariantCulture); M42.Text = m.M42.ToString(CultureInfo.InvariantCulture); M43.Text = m.M43.ToString(CultureInfo.InvariantCulture); M44.Text = m.M44.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private bool TryParse(out Matrix4x4 m)
+    {
+        bool ok = float.TryParse(M11.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m11)
+               && float.TryParse(M12.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m12)
+               && float.TryParse(M13.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m13)
+               && float.TryParse(M14.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m14)
+               && float.TryParse(M21.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m21)
+               && float.TryParse(M22.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m22)
+               && float.TryParse(M23.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m23)
+               && float.TryParse(M24.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m24)
+               && float.TryParse(M31.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m31)
+               && float.TryParse(M32.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m32)
+               && float.TryParse(M33.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m33)
+               && float.TryParse(M34.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m34)
+               && float.TryParse(M41.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m41)
+               && float.TryParse(M42.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m42)
+               && float.TryParse(M43.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m43)
+               && float.TryParse(M44.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var m44);
+        m = new Matrix4x4(m11,m12,m13,m14,m21,m22,m23,m24,m31,m32,m33,m34,m41,m42,m43,m44);
+        return ok;
+    }
+
+    private void Ok_Click(object sender, RoutedEventArgs e)
+    {
+        if (TryParse(out var mat))
+        {
+            ResultMatrix = mat;
+            DialogResult = true;
+        }
+        else
+        {
+            MessageBox.Show("Invalid numeric value", "Matrix", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+    }
+
+    private void Identity_Click(object sender, RoutedEventArgs e)
+    {
+        SetFields(Matrix4x4.Identity);
+    }
+}

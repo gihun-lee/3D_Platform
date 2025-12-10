@@ -1,0 +1,83 @@
+﻿using System.Numerics;
+using VPP.Core.Attributes;
+using VPP.Core.Models;
+using VPP.Plugins.PointCloud.Models;
+using ExecutionContext = VPP.Core.Models.ExecutionContext;
+using System.Linq;
+
+namespace VPP.Plugins.PointCloud.Nodes;
+
+[NodeInfo("Rigid Transform", "Point Cloud/Transform", "Apply 4x4 rigid transform matrix to point cloud(s) (rotation+translation)")]
+public class RigidTransformNode : NodeBase
+{
+    public RigidTransformNode()
+    {
+        AddParameter<Matrix4x4>("Matrix", Matrix4x4.Identity, required: false, displayName: "Matrix", description: "4x4 transform matrix (row-major). Translation in M14,M24,M34.");
+    }
+
+    protected override Task ExecuteCoreAsync(ExecutionContext context, CancellationToken cancellationToken)
+    {
+        var m = GetParameter<Matrix4x4>("Matrix");
+
+        // Collect all node-specific point cloud keys (multi-import scenario)
+        var specificKeys = context.Keys
+            .Where(k => k.StartsWith(ExecutionContext.PointCloudKey + "_"))
+            .ToList();
+
+        if (specificKeys.Count > 0)
+        {
+            foreach (var key in specificKeys)
+            {
+                var cloud = context.Get<PointCloudData>(key);
+                if (cloud == null || cloud.Points.Count == 0) continue;
+                var transformed = Transform(cloud, m);
+                context.Set(key, transformed); // replace in place
+            }
+
+            // If only one cloud, keep backward compatibility for downstream nodes expecting FilteredCloudKey
+            if (specificKeys.Count == 1)
+            {
+                context.Set(ExecutionContext.FilteredCloudKey, context.Get<PointCloudData>(specificKeys[0]));
+            }
+            else
+            {
+                // Do NOT set FilteredCloudKey to avoid visualization hiding other clouds
+                if (context.Contains(ExecutionContext.FilteredCloudKey))
+                {
+                    // Optionally clear an old filtered cloud if it would cause confusion
+                    context.Set<PointCloudData?>(ExecutionContext.FilteredCloudKey, null);
+                }
+            }
+        }
+        else
+        {
+            // Single (legacy) cloud scenario using global key
+            var source = context.Get<PointCloudData>(ExecutionContext.PointCloudKey);
+            if (source != null && source.Points.Count > 0)
+            {
+                var result = Transform(source, m);
+                context.Set(ExecutionContext.PointCloudKey, result);
+                context.Set(ExecutionContext.FilteredCloudKey, result); // maintain previous behavior
+            }
+        }
+
+        // Store matrix for downstream nodes if needed
+        context.Set("RigidTransformMatrix", m);
+        return Task.CompletedTask;
+    }
+
+    private static PointCloudData Transform(PointCloudData source, Matrix4x4 m)
+    {
+        var result = source.Clone();
+        for (int i = 0; i < result.Points.Count; i++)
+        {
+            var p = result.Points[i];
+            var x = m.M11 * p.X + m.M12 * p.Y + m.M13 * p.Z + m.M14;
+            var y = m.M21 * p.X + m.M22 * p.Y + m.M23 * p.Z + m.M24;
+            var z = m.M31 * p.X + m.M32 * p.Y + m.M33 * p.Z + m.M34;
+            result.Points[i] = new Vector3(x, y, z);
+        }
+        result.ComputeBoundingBox();
+        return result;
+    }
+}

@@ -1,0 +1,13 @@
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\bin\Release\net8.0-windows\VPP.Core.deps.json
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\bin\Release\net8.0-windows\VPP.Core.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\bin\Release\net8.0-windows\VPP.Core.pdb
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.csproj.AssemblyReference.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.AssemblyInfoInputs.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.AssemblyInfo.cs
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.csproj.CoreCompileInputs.cache
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.sourcelink.json
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\refint\VPP.Core.dll
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\VPP.Core.pdb
+C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.Core\obj\Release\net8.0-windows\ref\VPP.Core.dll
