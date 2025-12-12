@@ -1,0 +1,508 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using HelixToolkit.Wpf.SharpDX;
+using SharpDX;
+using System.Collections.ObjectModel;
+using System.Windows.Media.Media3D;
+using Color = System.Windows.Media.Color;
+using Colors = System.Windows.Media.Colors;
+using VPP.App.Rendering;
+using VPP.Core.Models;
+using VPP.Plugins.PointCloud.Models;
+
+namespace VPP.App.ViewModels;
+
+public partial class SceneViewModel : ObservableObject
+{
+    // GPU-accelerated SharpDX properties
+    [ObservableProperty] private PointGeometry3D? _pointCloudGeometry;
+    [ObservableProperty] private Color _pointCloudColor = Colors.LightGray;
+    [ObservableProperty] private double _pointSize = 2.0;
+    [ObservableProperty] private HelixToolkit.Wpf.SharpDX.Camera _camera;
+    [ObservableProperty] private IEffectsManager _effectsManager;
+
+    // Origin Axes
+    [ObservableProperty] private LineGeometry3D? _originAxesGeometry; // legacy
+    [ObservableProperty] private LineGeometry3D? _originXGeometry;
+    [ObservableProperty] private LineGeometry3D? _originYGeometry;
+    [ObservableProperty] private LineGeometry3D? _originZGeometry;
+    [ObservableProperty] private Color _originXColor = Colors.Red;
+    [ObservableProperty] private Color _originYColor = Colors.Green;
+    [ObservableProperty] private Color _originZColor = Colors.Blue;
+
+    // ROI Visualization
+    [ObservableProperty] private ObservableCollection<RoiVisualization> _roiVisualizations = new();
+    [ObservableProperty] private ObservableElement3DCollection _roiModels = new();
+    
+    // Legacy ROI properties (for compatibility if needed, or we can try to remove them if XAML is updated)
+    [ObservableProperty] private LineGeometry3D? _roiWireframeGeometry;
+    [ObservableProperty] private Color _roiWireframeColor = Colors.Yellow;
+    [ObservableProperty] private HelixToolkit.Wpf.SharpDX.MeshGeometry3D? _roiCenterPointGeometry;
+    [ObservableProperty] private Color _roiCenterPointColor = Colors.Red;
+
+    // Detected Circle Visualization
+    [ObservableProperty] private PointGeometry3D? _detectedCircleGeometry;
+    [ObservableProperty] private Color _detectedCircleColor = Colors.Yellow;
+    [ObservableProperty] private double _detectedCirclePointSize = 4.0;
+    [ObservableProperty] private LineGeometry3D? _detectedCircleOutlineGeometry;
+    [ObservableProperty] private Color _detectedCircleOutlineColor = Colors.Red;
+
+    // Constants
+    private const float RoiCenterSphereRadius = 0.1f;
+
+    public SceneViewModel()
+    {
+        _effectsManager = new DefaultEffectsManager();
+        _camera = new HelixToolkit.Wpf.SharpDX.PerspectiveCamera
+        {
+            Position = new Point3D(0, 0, 300),
+            LookDirection = new Vector3D(0, 0, -1),
+            UpDirection = new Vector3D(0, 1, 0),
+            FieldOfView = 45,
+            NearPlaneDistance = 0.1,
+            FarPlaneDistance = 100000
+        };
+    }
+
+    public void UpdatePointCloud(List<PointCloudData> clouds, bool fitCamera)
+    {
+        if (clouds == null || clouds.Count == 0)
+        {
+            PointCloudGeometry = null;
+            return;
+        }
+
+        try
+        {
+            PointGeometry3D geometry;
+            if (clouds.Count == 1)
+                (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(clouds[0], enableLod: true);
+            else
+                (geometry, _, _) = GpuPointCloudRenderer.CreateGeometryFromMultiple(clouds);
+
+            PointCloudGeometry = geometry;
+            
+            if (fitCamera)
+            {
+                FitCameraToPointCloud();
+            }
+
+            CreateOriginAxes();
+        }
+        catch (Exception)
+        {
+            // Handle or log error
+            PointCloudGeometry = null;
+        }
+    }
+
+    public void ClearPointCloud()
+    {
+        PointCloudGeometry = null;
+    }
+
+    public void UpdateDetectedCircle(PointCloudData? detectedCloud, CircleDetectionResult? circleResult)
+    {
+        if (detectedCloud != null && detectedCloud.Points.Count > 0)
+        {
+            try
+            {
+                var (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(detectedCloud, enableLod: false);
+                DetectedCircleGeometry = geometry;
+
+                if (circleResult != null && circleResult.Radius > 0)
+                {
+                    DetectedCircleOutlineGeometry = CreateCircleOutline(
+                        circleResult.Center,
+                        circleResult.Radius,
+                        circleResult.Normal);
+                }
+                else
+                {
+                    DetectedCircleOutlineGeometry = null;
+                }
+            }
+            catch
+            {
+                DetectedCircleGeometry = null;
+                DetectedCircleOutlineGeometry = null;
+            }
+        }
+        else
+        {
+            DetectedCircleGeometry = null;
+            DetectedCircleOutlineGeometry = null;
+        }
+    }
+
+    private LineGeometry3D CreateCircleOutline(System.Numerics.Vector3 center, float radius, System.Numerics.Vector3 normal)
+    {
+        const int segments = 64;
+        var positions = new Vector3Collection();
+        var indices = new IntCollection();
+
+        var (u, v) = GetPlaneAxes(normal);
+
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * 2.0f * MathF.PI / segments;
+            float x = radius * MathF.Cos(angle);
+            float y = radius * MathF.Sin(angle);
+
+            var point = center + x * u + y * v;
+            positions.Add(new Vector3(point.X, point.Y, point.Z));
+        }
+
+        for (int i = 0; i < segments; i++)
+        {
+            indices.Add(i);
+            indices.Add((i + 1) % segments);
+        }
+
+        return new LineGeometry3D
+        {
+            Positions = positions,
+            Indices = indices
+        };
+    }
+
+    private (System.Numerics.Vector3 u, System.Numerics.Vector3 v) GetPlaneAxes(System.Numerics.Vector3 normal)
+    {
+        var u = Math.Abs(normal.X) < 0.9f
+            ? System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(normal, System.Numerics.Vector3.UnitX))
+            : System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(normal, System.Numerics.Vector3.UnitY));
+        var v = System.Numerics.Vector3.Cross(normal, u);
+        return (u, v);
+    }
+
+    public void FitCameraToPointCloud()
+    {
+        if (PointCloudGeometry?.Positions == null || PointCloudGeometry.Positions.Count == 0 || Camera == null)
+            return;
+
+        var positions = PointCloudGeometry.Positions;
+        var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        var max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        foreach (var p in positions)
+        {
+            min = Vector3.Min(min, p);
+            max = Vector3.Max(max, p);
+        }
+        var center = (min + max) * 0.5f;
+        var extents = max - min;
+        float radius = extents.Length() * 0.5f;
+        if (radius <= 0) radius = 1f;
+
+        const double farPlaneBufferFactor = 10.0;
+
+        var pc = Camera as HelixToolkit.Wpf.SharpDX.PerspectiveCamera;
+        if (pc != null)
+        {
+            double fovRad = pc.FieldOfView * Math.PI / 180.0;
+            double distance = radius / Math.Sin(fovRad / 2.0);
+            distance *= 1.2;
+            var position = new Point3D(center.X, center.Y, center.Z + distance);
+            var lookDir = new Vector3D(center.X - position.X, center.Y - position.Y, center.Z - position.Z);
+            pc.Position = position;
+            pc.LookDirection = lookDir;
+            pc.UpDirection = new Vector3D(0, 1, 0);
+            pc.NearPlaneDistance = 0.1;
+            var desiredFar = distance + radius * farPlaneBufferFactor;
+            if (desiredFar > pc.FarPlaneDistance)
+                pc.FarPlaneDistance = desiredFar;
+        }
+        else
+        {
+            var oc = Camera as HelixToolkit.Wpf.SharpDX.OrthographicCamera;
+            if (oc != null)
+            {
+                double distance = radius * 2.5;
+                var position = new Point3D(center.X, center.Y, center.Z + distance);
+                var lookDir = new Vector3D(center.X - position.X, center.Y - position.Y, center.Z - position.Z);
+                oc.Position = position;
+                oc.LookDirection = lookDir;
+                oc.UpDirection = new Vector3D(0, 1, 0);
+                oc.Width = radius * 2.5;
+                oc.NearPlaneDistance = 0.1;
+                var desiredFar = distance + radius * farPlaneBufferFactor;
+                if (desiredFar > oc.FarPlaneDistance)
+                    oc.FarPlaneDistance = desiredFar;
+            }
+        }
+    }
+
+    private void CreateOriginAxes()
+    {
+        float axisLength = 50f;
+        if (PointCloudGeometry?.Positions != null && PointCloudGeometry.Positions.Count > 0)
+        {
+            var min = new Vector3(float.MaxValue);
+            var max = new Vector3(float.MinValue);
+            foreach (var p in PointCloudGeometry.Positions)
+            {
+                min = Vector3.Min(min, p);
+                max = Vector3.Max(max, p);
+            }
+            var size = max - min;
+            axisLength = Math.Max(10f, Math.Min((size.X + size.Y + size.Z) / 30f, 500f));
+        }
+
+        // Legacy combined geometry
+        var positionsCombined = new Vector3Collection
+        {
+            new Vector3(0,0,0), new Vector3(axisLength,0,0),
+            new Vector3(0,0,0), new Vector3(0,axisLength,0),
+            new Vector3(0,0,0), new Vector3(0,0,axisLength)
+        };
+        var colorsCombined = new Color4Collection
+        {
+            new Color4(1,0,0,1), new Color4(1,0,0,1),
+            new Color4(0,1,0,1), new Color4(0,1,0,1),
+            new Color4(0,0,1,1), new Color4(0,0,1,1)
+        };
+        OriginAxesGeometry = new LineGeometry3D { Positions = positionsCombined, Colors = colorsCombined, Indices = new IntCollection {0,1,2,3,4,5} };
+
+        // Separate geometries
+        OriginXGeometry = new LineGeometry3D
+        {
+            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(axisLength,0,0) },
+            Indices = new IntCollection {0,1}
+        };
+        OriginYGeometry = new LineGeometry3D
+        {
+            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(0,axisLength,0) },
+            Indices = new IntCollection {0,1}
+        };
+        OriginZGeometry = new LineGeometry3D
+        {
+            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(0,0,axisLength) },
+            Indices = new IntCollection {0,1}
+        };
+    }
+
+    public void UpdateRoiVisualizations(IEnumerable<RoiVisualizationData> rois)
+    {
+        RoiVisualizations.Clear();
+        RoiModels.Clear();
+        
+        // Clear legacy
+        RoiWireframeGeometry = null;
+        RoiCenterPointGeometry = null;
+
+        foreach (var roiData in rois)
+        {
+            var (wireframe, centerPoint) = CreateRoiGeometry(roiData.Center, roiData.Size, roiData.Radius, roiData.Shape);
+            
+            var roiViz = new RoiVisualization
+            {
+                NodeId = roiData.NodeId,
+                WireframeGeometry = wireframe,
+                CenterPointGeometry = centerPoint
+            };
+            RoiVisualizations.Add(roiViz);
+
+            if (wireframe != null)
+            {
+                RoiModels.Add(new LineGeometryModel3D
+                {
+                    Geometry = wireframe,
+                    Thickness = 3,
+                    Color = Colors.Yellow
+                });
+            }
+
+            if (centerPoint != null)
+            {
+                var meshModel = new MeshGeometryModel3D
+                {
+                    Geometry = centerPoint,
+                    Material = new PhongMaterial { DiffuseColor = new Color4(1.0f, 0.0f, 0.0f, 1.0f) }
+                };
+                RoiModels.Add(meshModel);
+            }
+
+            // For legacy binding support (shows last one)
+            RoiWireframeGeometry = wireframe;
+            RoiCenterPointGeometry = centerPoint;
+        }
+    }
+
+    private (LineGeometry3D wireframe, HelixToolkit.Wpf.SharpDX.MeshGeometry3D centerPoint) CreateRoiGeometry(
+        System.Numerics.Vector3 center, 
+        System.Numerics.Vector3 size, 
+        float radius, 
+        ROIShape shape)
+    {
+        var positions = new Vector3Collection();
+        var indices = new IntCollection();
+
+        if (shape == ROIShape.Box)
+        {
+            var hx = size.X / 2;
+            var hy = size.Y / 2;
+            var hz = size.Z / 2;
+
+            var corners = new[]
+            {
+                new Vector3(center.X - hx, center.Y - hy, center.Z - hz),
+                new Vector3(center.X + hx, center.Y - hy, center.Z - hz),
+                new Vector3(center.X + hx, center.Y + hy, center.Z - hz),
+                new Vector3(center.X - hx, center.Y + hy, center.Z - hz),
+                new Vector3(center.X - hx, center.Y - hy, center.Z + hz),
+                new Vector3(center.X + hx, center.Y - hy, center.Z + hz),
+                new Vector3(center.X + hx, center.Y + hy, center.Z + hz),
+                new Vector3(center.X - hx, center.Y + hy, center.Z + hz),
+            };
+
+            foreach (var corner in corners)
+                positions.Add(corner);
+
+            int[] edgeIndices = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
+            foreach (var idx in edgeIndices)
+                indices.Add(idx);
+        }
+        else if (shape == ROIShape.Cylinder)
+        {
+            int segments = 32;
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * 2 * MathF.PI / segments;
+                float x = center.X + radius * MathF.Cos(angle);
+                float z = center.Z + radius * MathF.Sin(angle);
+
+                positions.Add(new Vector3(x, center.Y - size.Y / 2, z));
+                positions.Add(new Vector3(x, center.Y + size.Y / 2, z));
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                indices.Add(i * 2);
+                indices.Add(next * 2);
+                indices.Add(i * 2 + 1);
+                indices.Add(next * 2 + 1);
+            }
+
+            for (int i = 0; i < segments; i += segments / 8)
+            {
+                indices.Add(i * 2);
+                indices.Add(i * 2 + 1);
+            }
+        }
+        else if (shape == ROIShape.Sphere)
+        {
+            int segments = 32;
+            int rings = 16;
+
+            for (int ring = 0; ring <= rings; ring++)
+            {
+                float phi = ring * MathF.PI / rings;
+                for (int seg = 0; seg < segments; seg++)
+                {
+                    float theta = seg * 2 * MathF.PI / segments;
+                    float x = center.X + radius * MathF.Sin(phi) * MathF.Cos(theta);
+                    float y = center.Y + radius * MathF.Cos(phi);
+                    float z = center.Z + radius * MathF.Sin(phi) * MathF.Sin(theta);
+
+                    positions.Add(new Vector3(x, y, z));
+                }
+            }
+
+            for (int ring = 0; ring < rings; ring++)
+            {
+                for (int seg = 0; seg < segments; seg++)
+                {
+                    int current = ring * (segments + 1) + seg;
+                    int next = current + (segments + 1);
+
+                    indices.Add(current);
+                    indices.Add(next);
+                    indices.Add(current + 1);
+
+                    indices.Add(current + 1);
+                    indices.Add(next);
+                    indices.Add(next + 1);
+                }
+            }
+        }
+
+        var wireframe = new LineGeometry3D
+        {
+            Positions = positions,
+            Indices = indices
+        };
+
+        var centerPoint = CreateSphereGeometry(center, RoiCenterSphereRadius, 6, 3);
+
+        return (wireframe, centerPoint);
+    }
+
+    private HelixToolkit.Wpf.SharpDX.MeshGeometry3D CreateSphereGeometry(System.Numerics.Vector3 center, float radius, int segments, int rings)
+    {
+        var positions = new Vector3Collection();
+        var indices = new IntCollection();
+        var normals = new Vector3Collection();
+        var texCoords = new Vector2Collection();
+
+        for (int ring = 0; ring <= rings; ring++)
+        {
+            float phi = ring * MathF.PI / rings;
+            for (int seg = 0; seg <= segments; seg++)
+            {
+                float theta = seg * 2 * MathF.PI / segments;
+                float x = center.X + radius * MathF.Sin(phi) * MathF.Cos(theta);
+                float y = center.Y + radius * MathF.Cos(phi);
+                float z = center.Z + radius * MathF.Sin(phi) * MathF.Sin(theta);
+
+                positions.Add(new Vector3(x, y, z));
+
+                var normal = System.Numerics.Vector3.Normalize(new System.Numerics.Vector3(
+                    x - center.X, y - center.Y, z - center.Z));
+                normals.Add(new Vector3(normal.X, normal.Y, normal.Z));
+
+                texCoords.Add(new Vector2((float)seg / segments, (float)ring / rings));
+            }
+        }
+
+        for (int ring = 0; ring < rings; ring++)
+        {
+            for (int seg = 0; seg < segments; seg++)
+            {
+                int current = ring * (segments + 1) + seg;
+                int next = current + (segments + 1);
+
+                indices.Add(current);
+                indices.Add(next);
+                indices.Add(current + 1);
+
+                indices.Add(current + 1);
+                indices.Add(next);
+                indices.Add(next + 1);
+            }
+        }
+
+        return new HelixToolkit.Wpf.SharpDX.MeshGeometry3D
+        {
+            Positions = positions,
+            Indices = indices,
+            Normals = normals,
+            TextureCoordinates = texCoords
+        };
+    }
+}
+
+public class RoiVisualizationData
+{
+    public string NodeId { get; set; } = string.Empty;
+    public System.Numerics.Vector3 Center { get; set; }
+    public System.Numerics.Vector3 Size { get; set; }
+    public float Radius { get; set; }
+    public ROIShape Shape { get; set; }
+}
+
+// Helper class to hold ROI visualization data
+public class RoiVisualization : ObservableObject
+{
+    public string NodeId { get; set; } = string.Empty;
+    public LineGeometry3D? WireframeGeometry { get; set; }
+    public HelixToolkit.Wpf.SharpDX.MeshGeometry3D? CenterPointGeometry { get; set; }
+}

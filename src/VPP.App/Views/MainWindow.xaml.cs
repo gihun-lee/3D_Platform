@@ -97,7 +97,7 @@ public partial class MainWindow : Window
         }
 
         // Relative 90-degree rotation
-        if (ViewModel?.Camera is Camera camera)
+        if (ViewModel?.Scene.Camera is Camera camera)
         {
             System.Windows.Media.Media3D.Vector3D axis = new(0, 0, 0);
             double angle = 0;
@@ -211,11 +211,11 @@ public partial class MainWindow : Window
 
     private void FitCameraButton_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel?.PointCloudGeometry?.Positions == null || ViewModel.PointCloudGeometry.Positions.Count == 0 || ViewModel.Camera == null)
+        if (ViewModel?.Scene.PointCloudGeometry?.Positions == null || ViewModel.Scene.PointCloudGeometry.Positions.Count == 0 || ViewModel.Scene.Camera == null)
         {
             return;
         }
-        var positions = ViewModel.PointCloudGeometry.Positions;
+        var positions = ViewModel.Scene.PointCloudGeometry.Positions;
         var min = new SharpDX.Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
         var max = new SharpDX.Vector3(float.MinValue, float.MinValue, float.MinValue);
         foreach (var p in positions)
@@ -227,7 +227,7 @@ public partial class MainWindow : Window
         var extents = max - min;
         float radius = extents.Length() * 0.5f;
         if (radius <= 0) radius = 1f;
-        if (ViewModel.Camera is PerspectiveCamera pc)
+        if (ViewModel.Scene.Camera is PerspectiveCamera pc)
         {
             double fovRad = pc.FieldOfView * Math.PI / 180.0;
             double distance = (radius / Math.Sin(fovRad / 2.0)) * 1.2;
@@ -235,7 +235,7 @@ public partial class MainWindow : Window
             pc.LookDirection = new System.Windows.Media.Media3D.Vector3D(0, 0, -distance);
             pc.UpDirection = new System.Windows.Media.Media3D.Vector3D(0, 1, 0);
         }
-        else if (ViewModel.Camera is OrthographicCamera oc)
+        else if (ViewModel.Scene.Camera is OrthographicCamera oc)
         {
             oc.LookDirection = new System.Windows.Media.Media3D.Vector3D(0, 0, -1);
             oc.Position = new System.Windows.Media.Media3D.Point3D(center.X, center.Y, center.Z + radius * 2);
@@ -844,19 +844,19 @@ public partial class MainWindow : Window
 
     private void Viewport3D_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        // Handle camera panning when not in ROI mode
-        if (ViewModel == null || !ViewModel.IsRoiDrawingMode || ViewModel.SelectedRoiNode == null)
+        // Handle camera panning when not in ROI mode OR when Space is pressed (override)
+        if (ViewModel == null || !ViewModel.IsRoiDrawingMode || ViewModel.SelectedRoiNode == null || Keyboard.IsKeyDown(Key.Space))
         {
             // Start camera panning
             _isDraggingCamera = true;
             _cameraDragStartPos = e.GetPosition(Viewport3D);
 
-            if (ViewModel?.Camera is PerspectiveCamera perspCam)
+            if (ViewModel?.Scene.Camera is PerspectiveCamera perspCam)
             {
                 _cameraStartPosition = perspCam.Position;
                 _cameraStartLookDirection = perspCam.LookDirection;
             }
-            else if (ViewModel?.Camera is OrthographicCamera orthoCam)
+            else if (ViewModel?.Scene.Camera is OrthographicCamera orthoCam)
             {
                 _cameraStartPosition = orthoCam.Position;
                 _cameraStartLookDirection = orthoCam.LookDirection;
@@ -891,7 +891,7 @@ public partial class MainWindow : Window
             var delta = currentPos - _cameraDragStartPos;
 
             // Pan the camera based on mouse movement
-            if (ViewModel?.Camera is PerspectiveCamera perspCam)
+            if (ViewModel?.Scene.Camera is PerspectiveCamera perspCam)
             {
                 // Calculate right and up vectors
                 var lookDir = perspCam.LookDirection;
@@ -909,7 +909,7 @@ public partial class MainWindow : Window
                 var panOffset = rightDir * (-delta.X * movementScale) + upDir * (delta.Y * movementScale);
                 perspCam.Position = _cameraStartPosition + panOffset;
             }
-            else if (ViewModel?.Camera is OrthographicCamera orthoCam)
+            else if (ViewModel?.Scene.Camera is OrthographicCamera orthoCam)
             {
                 // Calculate right and up vectors
                 var lookDir = orthoCam.LookDirection;
@@ -1077,12 +1077,12 @@ public partial class MainWindow : Window
 
     private System.Numerics.Vector3? GetHitPoint(System.Windows.Point mousePosition)
     {
-        if (ViewModel?.PointCloudGeometry?.Positions == null || ViewModel.PointCloudGeometry.Positions.Count == 0)
+        if (ViewModel?.Scene.PointCloudGeometry?.Positions == null || ViewModel.Scene.PointCloudGeometry.Positions.Count == 0)
             return null;
 
         // Use camera ray casting to find nearest point
         var viewport = Viewport3D;
-        var camera = ViewModel.Camera;
+        var camera = ViewModel.Scene.Camera;
 
         if (camera is PerspectiveCamera perspCam)
         {
@@ -1090,7 +1090,7 @@ public partial class MainWindow : Window
             var ray = GetRay(perspCam, mousePosition, viewport.ActualWidth, viewport.ActualHeight);
 
             // Find closest point cloud point to ray
-            var positions = ViewModel.PointCloudGeometry.Positions;
+            var positions = ViewModel.Scene.PointCloudGeometry.Positions;
             float minDist = float.MaxValue;
             System.Numerics.Vector3? closestPoint = null;
 
@@ -1221,6 +1221,8 @@ public partial class MainWindow : Window
         {
             NodeGraphViewport.Cursor = Cursors.SizeAll;
             NodeGraphViewport.ForceCursor = true;
+            Viewport3D.Cursor = Cursors.SizeAll;
+            Viewport3D.ForceCursor = true;
         }
 
         // Delete key: delete all selected nodes
@@ -1329,6 +1331,8 @@ public partial class MainWindow : Window
         {
             NodeGraphViewport.Cursor = Cursors.Arrow;
             NodeGraphViewport.ForceCursor = false;
+            Viewport3D.Cursor = Cursors.Arrow;
+            Viewport3D.ForceCursor = false;
         }
     }
 

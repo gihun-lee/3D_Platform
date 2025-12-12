@@ -38,12 +38,7 @@ public partial class MainViewModel : ObservableObject
     // Node zoom scale for visual scaling only (doesn't affect canvas size)
     [ObservableProperty] private double _nodeZoomScale = 1.0;
 
-    // GPU-accelerated SharpDX properties
-    [ObservableProperty] private PointGeometry3D? _pointCloudGeometry;
-    [ObservableProperty] private Color _pointCloudColor = Colors.LightGray; // Darker default for visibility
-    [ObservableProperty] private double _pointSize = 2.0;
-    [ObservableProperty] private Camera _camera;
-    [ObservableProperty] private IEffectsManager _effectsManager;
+    [ObservableProperty] private SceneViewModel _scene = new();
 
     // LOD settings
     private const int MAX_POINTS_FOR_FULL_RENDER = 10_000_000; // 10M points max
@@ -56,28 +51,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private Media3D.Point3D _detectedCenter;
     [ObservableProperty] private string _nodeSearchText = "";
     [ObservableProperty] private ObservableCollection<string> _filteredNodes = new();
-    [ObservableProperty] private LineGeometry3D? _originAxesGeometry; // axes lines (legacy combined)
-    [ObservableProperty] private Color _originXColor = Colors.Red;
-    [ObservableProperty] private Color _originYColor = Colors.Green;
-    [ObservableProperty] private Color _originZColor = Colors.Blue;
-    // New per-axis geometries for colored rendering
-    [ObservableProperty] private LineGeometry3D? _originXGeometry;
-    [ObservableProperty] private LineGeometry3D? _originYGeometry;
-    [ObservableProperty] private LineGeometry3D? _originZGeometry;
 
     // ROI Drawing Mode
     [ObservableProperty] private bool _isRoiDrawingMode;
     [ObservableProperty] private NodeViewModel? _selectedRoiNode;
-    [ObservableProperty] private LineGeometry3D? _roiWireframeGeometry;
-    [ObservableProperty] private Color _roiWireframeColor = Colors.Yellow;
-    [ObservableProperty] private MeshGeometry3D? _roiCenterPointGeometry;
-    [ObservableProperty] private Color _roiCenterPointColor = Colors.Red;
-    
-    // Collection to hold multiple ROI wireframes
-    [ObservableProperty] private ObservableCollection<RoiVisualization> _roiVisualizations = new();
-    
-    // Collection of 3D models for ROIs (for rendering)
-    [ObservableProperty] private ObservableElement3DCollection _roiModels = new();
 
     // ROI Filter toggle (visible only when ROI Filter node is selected)
     [ObservableProperty] private bool _isRoiFilterToggleVisible;
@@ -92,36 +69,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isInspectButtonVisible;
     private NodeViewModel? _selectedInspectionNode;
     
-    // Detected circle visualization
-    [ObservableProperty] private PointGeometry3D? _detectedCircleGeometry;
-    [ObservableProperty] private Color _detectedCircleColor = Colors.Yellow; // Changed to bright yellow for better visibility
-    [ObservableProperty] private double _detectedCirclePointSize = 4.0; // Larger point size for detected circle
-    
-    // Detected circle outline (red circle drawn in 3D space)
-    [ObservableProperty] private LineGeometry3D? _detectedCircleOutlineGeometry;
-    [ObservableProperty] private Color _detectedCircleOutlineColor = Colors.Red;
-
     // Track if we should force filter visualization for downstream nodes
     private bool _forceFilterVisualization = false;
-
-    // Center point sphere radius (smaller for less visual clutter)
-    private const float RoiCenterSphereRadius = 0.1f; // reduced from 0.5f
 
     public MainViewModel()
     {
         _pluginService = new PluginService();
         _executionEngine = new ExecutionEngine();
-        _effectsManager = new DefaultEffectsManager();
-        _camera = new PerspectiveCamera
-        {
-            Position = new Media3D.Point3D(0, 0, 300),
-            LookDirection = new Media3D.Vector3D(0, 0, -1),
-            UpDirection = new Media3D.Vector3D(0, 1, 0),
-            FieldOfView = 45,
-            NearPlaneDistance = 0.1,
-            FarPlaneDistance = 100000 // Large far plane to prevent disappearing on zoom out
-        };
-
+        
         // Load built-in plugins
         _pluginService.LoadFromAssembly(typeof(PointCloudPlugin).Assembly);
 
@@ -261,20 +216,6 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            // Build detection cloud from current visualization (handles multiple imports/transforms)
-            var (detectionCloud, roiUsed) = BuildDetectionCloudForCircle();
-            if (detectionCloud == null || detectionCloud.Points.Count < 3)
-            {
-                StatusMessage = "Circle Detection: No suitable data (need >= 3 points). Ensure ROI Filter is connected and includes the hole boundary.";
-                // Show full visualization
-                UpdateVisualization();
-                DetectedCircleGeometry = null;
-                DetectedCircleOutlineGeometry = null;
-                return;
-            }
-
-            StatusMessage = $"Detecting circle in {(roiUsed != null ? "ROI filtered" : "full")} data ({detectionCloud.Points.Count:N0} points)...";
-
             // Get the CircleDetectionNode instance
             var circleNode = _selectedCircleDetectionNode.Node as VPP.Plugins.PointCloud.Nodes.CircleDetectionNode;
             if (circleNode == null)
@@ -283,18 +224,28 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Provide ROI to context so detector can choose plane accordingly
-            if (roiUsed != null)
+            // Build detection cloud from connected ROI Filter
+            var (detectionCloud, roiUsed) = BuildDetectionCloudForCircle(circleNode);
+            if (detectionCloud == null || detectionCloud.Points.Count < 3)
             {
-                _lastExecutionContext.Set(VPP.Core.Models.ExecutionContext.ROIKey, roiUsed);
+                StatusMessage = "Circle Detection: No suitable data (need >= 3 points). Ensure ROI Filter is connected and includes the hole boundary.";
+                // Show full visualization
+                UpdateVisualization();
+                Scene.UpdateDetectedCircle(null, null);
+                return;
             }
 
+            StatusMessage = $"Detecting circle in {(roiUsed != null ? "ROI filtered" : "full")} data ({detectionCloud.Points.Count:N0} points)...";
+
+            // Provide ROI to context so detector can choose plane accordingly
+            // Note: We don't need to set ROIKey globally anymore as the node will look up connected ROI
+            
             await Task.Run(() => circleNode.PerformDetection(_lastExecutionContext, detectionCloud, CancellationToken.None));
 
             UpdateVisualization();
             UpdateDetectedCircleVisualization();
             
-            var result = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+            var result = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{circleNode.Id}");
             if (result != null && result.InlierCount > 0)
             {
                 StatusMessage = $"✓ Circle detected! Radius: {result.Radius:F3}, Center: ({result.Center.X:F2}, {result.Center.Y:F2}, {result.Center.Z:F2}), Inliers: {result.InlierCount}/{detectionCloud.Points.Count}";
@@ -310,10 +261,36 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private (PointCloudData? cloud, ROI3D? roiUsed) BuildDetectionCloudForCircle()
+    private (PointCloudData? cloud, ROI3D? roiUsed) BuildDetectionCloudForCircle(VPP.Plugins.PointCloud.Nodes.CircleDetectionNode? circleNode = null)
     {
         if (_lastExecutionContext == null) return (null, null);
 
+        // If a specific circle node is provided, try to get its connected filtered cloud directly
+        if (circleNode != null)
+        {
+            // We need to find the connected ROI Filter ID
+            var roiFilterNodeId = Graph.Connections
+                .Where(c => c.TargetNodeId == circleNode.Id)
+                .Select(c => c.SourceNodeId)
+                .FirstOrDefault(id => 
+                {
+                    var node = Graph.Nodes.FirstOrDefault(n => n.Id == id);
+                    return node?.Name == "ROI Filter";
+                });
+
+            if (roiFilterNodeId != null)
+            {
+                var filteredCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.FilteredCloudKey}_{roiFilterNodeId}");
+                var connectedRoi = _lastExecutionContext.Get<ROI3D>($"{VPP.Core.Models.ExecutionContext.ROIKey}_{roiFilterNodeId}");
+                
+                if (filteredCloud != null && filteredCloud.Points.Count > 0)
+                {
+                    return (filteredCloud, connectedRoi);
+                }
+            }
+        }
+
+        // Fallback logic (should rarely be reached if graph is connected properly)
         // Reuse visualization pipeline to gather all clouds
         var clouds = new List<PointCloudData>();
         var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
@@ -356,13 +333,30 @@ public partial class MainViewModel : ObservableObject
                 clouds.Add(globalCloud);
         }
 
-        // Determine ROI from ROI Filter and connected ROI Draw
+        // Determine ROI from connected ROI Filter
         ROI3D? roi = null;
-        var roiFilterNode = Graph.Nodes.FirstOrDefault(n => n.Name == "ROI Filter");
-        if (roiFilterNode != null)
+        
+        // Use the ROI Filter that was identified when the node was selected
+        if (_selectedRoiFilterNode != null)
         {
-            var roiFilterNodeVm = Nodes.FirstOrDefault(n => n.Node.Id == roiFilterNode.Id);
-            roi = roiFilterNodeVm != null ? BuildRoiFromConnectedDrawNode(roiFilterNodeVm) : null;
+            roi = BuildRoiFromConnectedDrawNode(_selectedRoiFilterNode);
+        }
+        // Fallback: try to find connected ROI Filter if not already set
+        else if (_selectedCircleDetectionNode != null)
+        {
+            var roiFilterNode = Graph.Connections
+                .Where(c => c.TargetNodeId == _selectedCircleDetectionNode.Node.Id)
+                .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "ROI Filter"))
+                .FirstOrDefault();
+
+            if (roiFilterNode != null)
+            {
+                var roiFilterNodeVm = Nodes.FirstOrDefault(n => n.Node.Id == roiFilterNode.Id);
+                if (roiFilterNodeVm != null)
+                {
+                    roi = BuildRoiFromConnectedDrawNode(roiFilterNodeVm);
+                }
+            }
         }
 
         // Apply ROI across all clouds if available
@@ -428,7 +422,7 @@ public partial class MainViewModel : ObservableObject
             // Update visualization to show inspection result
             UpdateInspectionVisualization();
 
-            var result = _lastExecutionContext.Get<InspectionResult>("InspectionResult");
+            var result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{inspectionNode.Id}");
             if (result != null)
             {
                 StatusMessage = result.Pass
@@ -452,16 +446,35 @@ public partial class MainViewModel : ObservableObject
     {
         if (_lastExecutionContext == null) return;
 
-        var result = _lastExecutionContext.Get<InspectionResult>("InspectionResult");
-        if (result != null)
+        // If inspection node selected, show its specific result
+        if (_selectedInspectionNode != null)
         {
-            InspectionPass = result.Pass;
-            InspectionResult = result.Message;
-
-            // Update status message with detailed info
-            if (result.Measurements.ContainsKey("Radius"))
+            var result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{_selectedInspectionNode.Node.Id}");
+            if (result != null)
             {
-                DetectedRadius = result.Measurements["Radius"];
+                InspectionPass = result.Pass;
+                InspectionResult = result.Message;
+
+                // Update status message with detailed info
+                if (result.Measurements.ContainsKey("Radius"))
+                {
+                    DetectedRadius = result.Measurements["Radius"];
+                }
+            }
+        }
+        else
+        {
+            var result = _lastExecutionContext.Get<InspectionResult>("InspectionResult");
+            if (result != null)
+            {
+                InspectionPass = result.Pass;
+                InspectionResult = result.Message;
+
+                // Update status message with detailed info
+                if (result.Measurements.ContainsKey("Radius"))
+                {
+                    DetectedRadius = result.Measurements["Radius"];
+                }
             }
         }
     }
@@ -470,30 +483,22 @@ public partial class MainViewModel : ObservableObject
     {
         if (_lastExecutionContext == null) 
         {
-            DetectedCircleGeometry = null;
-            DetectedCircleOutlineGeometry = null;
+            Scene.UpdateDetectedCircle(null, null);
             return;
         }
 
-        var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
-        var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
-        
-        if (detectedCloud != null && detectedCloud.Points.Count > 0)
+        // If a specific circle detection node is selected, show its result
+        if (_selectedCircleDetectionNode != null)
         {
-            try
+            var detectedCloud = _lastExecutionContext.Get<PointCloudData>($"DetectedCircleCloud_{_selectedCircleDetectionNode.Node.Id}");
+            var circleResult = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{_selectedCircleDetectionNode.Node.Id}");
+            
+            Scene.UpdateDetectedCircle(detectedCloud, circleResult);
+
+            if (detectedCloud != null && detectedCloud.Points.Count > 0)
             {
-                // Create geometry with larger point size for better visibility
-                var (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(detectedCloud, enableLod: false);
-                DetectedCircleGeometry = geometry;
-                
-                // Create circle outline if we have circle result
                 if (circleResult != null && circleResult.Radius > 0)
                 {
-                    DetectedCircleOutlineGeometry = CreateCircleOutline(
-                        circleResult.Center, 
-                        circleResult.Radius, 
-                        circleResult.Normal);
-                    
                     StatusMessage += $" | Circle: R={circleResult.Radius:F2}mm, Inliers={detectedCloud.Points.Count:N0} (RED OUTLINE)";
                 }
                 else
@@ -501,61 +506,15 @@ public partial class MainViewModel : ObservableObject
                     StatusMessage += $" | Detected Circle: {detectedCloud.Points.Count:N0} points shown in YELLOW";
                 }
             }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error rendering detected circle: {ex.Message}";
-            }
         }
         else
         {
-            DetectedCircleGeometry = null;
-            DetectedCircleOutlineGeometry = null;
+            // Fallback to legacy global key if no node selected (or show nothing)
+            var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
+            var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+            
+            Scene.UpdateDetectedCircle(detectedCloud, circleResult);
         }
-    }
-
-    private LineGeometry3D CreateCircleOutline(System.Numerics.Vector3 center, float radius, System.Numerics.Vector3 normal)
-    {
-        const int segments = 64; // Number of segments for smooth circle
-        var positions = new Vector3Collection();
-        var indices = new IntCollection();
-
-        // Get orthogonal basis vectors for the circle plane
-        var (u, v) = GetPlaneAxes(normal);
-
-        // Generate circle points
-        for (int i = 0; i < segments; i++)
-        {
-            float angle = i * 2.0f * MathF.PI / segments;
-            float x = radius * MathF.Cos(angle);
-            float y = radius * MathF.Sin(angle);
-
-            // Calculate 3D position on the circle
-            var point = center + x * u + y * v;
-            positions.Add(new Vector3(point.X, point.Y, point.Z));
-        }
-
-        // Create line indices (connect consecutive points in a loop)
-        for (int i = 0; i < segments; i++)
-        {
-            indices.Add(i);
-            indices.Add((i + 1) % segments);
-        }
-
-        return new LineGeometry3D
-        {
-            Positions = positions,
-            Indices = indices
-        };
-    }
-
-    private (System.Numerics.Vector3 u, System.Numerics.Vector3 v) GetPlaneAxes(System.Numerics.Vector3 normal)
-    {
-        // Create orthogonal basis for the plane perpendicular to normal
-        var u = Math.Abs(normal.X) < 0.9f
-            ? System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(normal, System.Numerics.Vector3.UnitX))
-            : System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(normal, System.Numerics.Vector3.UnitY));
-        var v = System.Numerics.Vector3.Cross(normal, u);
-        return (u, v);
     }
 
     [RelayCommand]
@@ -711,16 +670,11 @@ public partial class MainViewModel : ObservableObject
         else if (_selectedCircleDetectionNode != null || _forceFilterVisualization)
         {
             // Circle Detection or other downstream node selected
-            // Find the ROI Filter node
-            var roiFilterNode = Graph.Nodes.FirstOrDefault(n => n.Name == "ROI Filter");
-            if (roiFilterNode != null)
+            // Use the ROI Filter connected to the selected node (if any)
+            if (_selectedRoiFilterNode != null)
             {
-                var roiFilterNodeVm = Nodes.FirstOrDefault(n => n.Node.Id == roiFilterNode.Id);
-                if (roiFilterNodeVm != null)
-                {
-                    shouldApplyFilter = true;
-                    roi = BuildRoiFromConnectedDrawNode(roiFilterNodeVm);
-                }
+                shouldApplyFilter = true;
+                roi = BuildRoiFromConnectedDrawNode(_selectedRoiFilterNode);
             }
         }
 
@@ -736,25 +690,19 @@ public partial class MainViewModel : ObservableObject
         if (clouds.Count == 0)
         {
             StatusMessage = "No points to display";
+            Scene.ClearPointCloud();
             return;
         }
 
         try
         {
-            PointGeometry3D geometry;
-            int renderedPoints;
-            string lodInfo;
-            if (clouds.Count == 1)
-                (geometry, renderedPoints, lodInfo) = GpuPointCloudRenderer.CreateGeometry(clouds[0], enableLod: true);
-            else
-                (geometry, renderedPoints, lodInfo) = GpuPointCloudRenderer.CreateGeometryFromMultiple(clouds);
-
-            PointCloudGeometry = geometry;
-            FitCameraToPointCloud();
-
-            var memoryMb = GpuPointCloudRenderer.EstimateMemoryUsage(renderedPoints, geometry.Colors != null) / (1024.0 * 1024.0);
+            Scene.UpdatePointCloud(clouds, fitCamera: true);
+            
+            // Calculate stats for status message
+            int renderedPoints = Scene.PointCloudGeometry?.Positions?.Count ?? 0;
+            var memoryMb = GpuPointCloudRenderer.EstimateMemoryUsage(renderedPoints, Scene.PointCloudGeometry?.Colors != null) / (1024.0 * 1024.0);
             var filterStatus = shouldApplyFilter ? " [ROI FILTERED]" : "";
-            StatusMessage = $"Displaying {renderedPoints:N0}/{totalOriginalPoints:N0} points ({clouds.Count} cloud(s)){filterStatus} | {lodInfo} | GPU Memory: ~{memoryMb:F1} MB";
+            StatusMessage = $"Displaying {renderedPoints:N0}/{totalOriginalPoints:N0} points ({clouds.Count} cloud(s)){filterStatus} | GPU Memory: ~{memoryMb:F1} MB";
         }
         catch (Exception ex)
         {
@@ -762,7 +710,6 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        CreateOriginAxes();
         UpdateInspectionResults();
     }
 
@@ -872,121 +819,47 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
-    private void CreateOriginAxes()
-    {
-        float axisLength = 50f;
-        if (PointCloudGeometry?.Positions != null && PointCloudGeometry.Positions.Count > 0)
-        {
-            var min = new Vector3(float.MaxValue);
-            var max = new Vector3(float.MinValue);
-            foreach (var p in PointCloudGeometry.Positions)
-            {
-                min = Vector3.Min(min, p);
-                max = Vector3.Max(max, p);
-            }
-            var size = max - min;
-            axisLength = Math.Max(10f, Math.Min((size.X + size.Y + size.Z) / 30f, 500f));
-        }
-
-        // Legacy combined geometry (keep for backward compatibility if referenced elsewhere)
-        var positionsCombined = new Vector3Collection
-        {
-            new Vector3(0,0,0), new Vector3(axisLength,0,0),
-            new Vector3(0,0,0), new Vector3(0,axisLength,0),
-            new Vector3(0,0,0), new Vector3(0,0,axisLength)
-        };
-        var colorsCombined = new Color4Collection
-        {
-            new Color4(1,0,0,1), new Color4(1,0,0,1),
-            new Color4(0,1,0,1), new Color4(0,1,0,1),
-            new Color4(0,0,1,1), new Color4(0,0,1,1)
-        };
-        OriginAxesGeometry = new LineGeometry3D { Positions = positionsCombined, Colors = colorsCombined, Indices = new IntCollection {0,1,2,3,4,5} };
-
-        // Separate geometries for X, Y, Z axes
-        OriginXGeometry = new LineGeometry3D
-        {
-            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(axisLength,0,0) },
-            Indices = new IntCollection {0,1}
-        };
-        OriginYGeometry = new LineGeometry3D
-        {
-            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(0,axisLength,0) },
-            Indices = new IntCollection {0,1}
-        };
-        OriginZGeometry = new LineGeometry3D
-        {
-            Positions = new Vector3Collection { new Vector3(0,0,0), new Vector3(0,0,axisLength) },
-            Indices = new IntCollection {0,1}
-        };
-    }
-
-    private void FitCameraToPointCloud()
-    {
-        if (PointCloudGeometry?.Positions == null || PointCloudGeometry.Positions.Count == 0 || Camera == null)
-            return;
-
-        var positions = PointCloudGeometry.Positions;
-        var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-        var max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-        foreach (var p in positions)
-        {
-            min = Vector3.Min(min, p);
-            max = Vector3.Max(max, p);
-        }
-        var center = (min + max) * 0.5f;
-        var extents = max - min;
-        float radius = extents.Length() * 0.5f;
-        if (radius <= 0) radius = 1f;
-
-        const double farPlaneBufferFactor = 10.0; // Keep far plane comfortably beyond scene
-
-        if (Camera is PerspectiveCamera pc)
-        {
-            double fovRad = pc.FieldOfView * Math.PI / 180.0;
-            double distance = radius / Math.Sin(fovRad / 2.0);
-            distance *= 1.2; // margin
-            var position = new Media3D.Point3D(center.X, center.Y, center.Z + distance);
-            var lookDir = new Media3D.Vector3D(center.X - position.X, center.Y - position.Y, center.Z - position.Z);
-            pc.Position = position;
-            pc.LookDirection = lookDir;
-            pc.UpDirection = new Media3D.Vector3D(0, 1, 0);
-            pc.NearPlaneDistance = 0.1; // keep stable near plane
-            var desiredFar = distance + radius * farPlaneBufferFactor;
-            if (desiredFar > pc.FarPlaneDistance)
-                pc.FarPlaneDistance = desiredFar; // only grow, never shrink
-        }
-        else if (Camera is OrthographicCamera oc)
-        {
-            double distance = radius * 2.5;
-            var position = new Media3D.Point3D(center.X, center.Y, center.Z + distance);
-            var lookDir = new Media3D.Vector3D(center.X - position.X, center.Y - position.Y, center.Z - position.Z);
-            oc.Position = position;
-            oc.LookDirection = lookDir;
-            oc.UpDirection = new Media3D.Vector3D(0, 1, 0);
-            oc.Width = radius * 2.5; // ensure whole cloud fits
-            oc.NearPlaneDistance = 0.1;
-            var desiredFar = distance + radius * farPlaneBufferFactor;
-            if (desiredFar > oc.FarPlaneDistance)
-                oc.FarPlaneDistance = desiredFar;
-        }
-    }
-
     private void UpdateInspectionResults()
     {
         if (_lastExecutionContext == null) return;
 
-        if (_lastExecutionContext.TryGet<InspectionResult>("InspectionResult", out var inspectionResult))
+        // If inspection node selected, show its specific result
+        if (_selectedInspectionNode != null)
         {
-            InspectionPass = inspectionResult.Pass;
-            InspectionResult = inspectionResult.Message;
+            if (_lastExecutionContext.TryGet<InspectionResult>($"InspectionResult_{_selectedInspectionNode.Node.Id}", out var inspectionResult))
+            {
+                InspectionPass = inspectionResult.Pass;
+                InspectionResult = inspectionResult.Message;
+            }
+        }
+        else
+        {
+            // Fallback to legacy global key
+            if (_lastExecutionContext.TryGet<InspectionResult>("InspectionResult", out var inspectionResult))
+            {
+                InspectionPass = inspectionResult.Pass;
+                InspectionResult = inspectionResult.Message;
+            }
         }
 
-        var circle = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
-        if (circle != null)
+        // If circle node selected, show its specific result
+        if (_selectedCircleDetectionNode != null)
         {
-            DetectedRadius = circle.Radius;
-            DetectedCenter = new Media3D.Point3D(circle.Center.X, circle.Center.Y, circle.Center.Z);
+            var circle = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{_selectedCircleDetectionNode.Node.Id}");
+            if (circle != null)
+            {
+                DetectedRadius = circle.Radius;
+                DetectedCenter = new Media3D.Point3D(circle.Center.X, circle.Center.Y, circle.Center.Z);
+            }
+        }
+        else
+        {
+            var circle = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+            if (circle != null)
+            {
+                DetectedRadius = circle.Radius;
+                DetectedCenter = new Media3D.Point3D(circle.Center.X, circle.Center.Y, circle.Center.Z);
+            }
         }
     }
 
@@ -1172,11 +1045,23 @@ public partial class MainViewModel : ObservableObject
                         IsRoiFilterOn = true; // Auto-enable filter
                         _forceFilterVisualization = true;
                         StatusMessage = "Circle Detection Mode: Auto-enabled ROI filter - showing filtered data only";
+
+                        // Find connected ROI Draw node and show only its ROI
+                        var connectedDrawNode = FindConnectedRoiDrawNode(roiFilterNodeVm);
+                        if (connectedDrawNode != null)
+                        {
+                            UpdateSingleRoiVisualization(connectedDrawNode);
+                        }
+                        else
+                        {
+                            UpdateAllRoiVisualizations();
+                        }
                     }
                 }
                 else
                 {
                     StatusMessage = "Circle Detection selected: No ROI Filter connected";
+                    UpdateAllRoiVisualizations();
                 }
             }
 
@@ -1222,12 +1107,33 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSingleRoiVisualization(NodeViewModel roiNodeVm)
     {
-        RoiVisualizations.Clear();
-        RoiModels.Clear();
-        
         if (roiNodeVm?.Node == null)
+        {
+            Scene.UpdateRoiVisualizations(Enumerable.Empty<RoiVisualizationData>());
             return;
+        }
 
+        var roiData = CreateRoiData(roiNodeVm);
+        Scene.UpdateRoiVisualizations(new[] { roiData });
+    }
+
+    private void UpdateAllRoiVisualizations()
+    {
+        // Find all ROI Draw nodes
+        var roiDrawNodes = Nodes.Where(n => n.Name == "ROI Draw").ToList();
+        
+        if (roiDrawNodes.Count == 0)
+        {
+            Scene.UpdateRoiVisualizations(Enumerable.Empty<RoiVisualizationData>());
+            return;
+        }
+
+        var rois = roiDrawNodes.Select(CreateRoiData).ToList();
+        Scene.UpdateRoiVisualizations(rois);
+    }
+
+    private RoiVisualizationData CreateRoiData(NodeViewModel roiNodeVm)
+    {
         var centerX = GetParameterValue<float>(roiNodeVm.Node, "CenterX");
         var centerY = GetParameterValue<float>(roiNodeVm.Node, "CenterY");
         var centerZ = GetParameterValue<float>(roiNodeVm.Node, "CenterZ");
@@ -1244,126 +1150,14 @@ public partial class MainViewModel : ObservableObject
             _ => ROIShape.Box
         };
 
-        var (wireframe, centerPoint) = CreateRoiGeometry(
-            new System.Numerics.Vector3(centerX, centerY, centerZ),
-            new System.Numerics.Vector3(sizeX, sizeY, sizeZ),
-            radius,
-            shape);
-
-        var roiViz = new RoiVisualization
+        return new RoiVisualizationData
         {
             NodeId = roiNodeVm.Node.Id,
-            WireframeGeometry = wireframe,
-            CenterPointGeometry = centerPoint
+            Center = new System.Numerics.Vector3(centerX, centerY, centerZ),
+            Size = new System.Numerics.Vector3(sizeX, sizeY, sizeZ),
+            Radius = radius,
+            Shape = shape
         };
-
-        RoiVisualizations.Add(roiViz);
-        
-        // Add 3D models to the collection
-        if (wireframe != null)
-        {
-            RoiModels.Add(new LineGeometryModel3D
-            {
-                Geometry = wireframe,
-                Thickness = 3,
-                Color = System.Windows.Media.Colors.Yellow
-            });
-        }
-        
-        if (centerPoint != null)
-        {
-            var meshModel = new MeshGeometryModel3D
-            {
-                Geometry = centerPoint
-            };
-            // Convert System.Windows.Media.Color to SharpDX.Color4
-            meshModel.Material = new PhongMaterial { DiffuseColor = new SharpDX.Color4(1.0f, 0.0f, 0.0f, 1.0f) }; // Red
-            RoiModels.Add(meshModel);
-        }
-        
-        // Also update the legacy single ROI properties for compatibility
-        RoiWireframeGeometry = wireframe;
-        RoiCenterPointGeometry = centerPoint;
-    }
-
-    private void UpdateAllRoiVisualizations()
-    {
-        RoiVisualizations.Clear();
-        RoiModels.Clear();
-        
-        // Find all ROI Draw nodes
-        var roiDrawNodes = Nodes.Where(n => n.Name == "ROI Draw").ToList();
-        
-        if (roiDrawNodes.Count == 0)
-        {
-            // Clear legacy properties
-            RoiWireframeGeometry = null;
-            RoiCenterPointGeometry = null;
-            return;
-        }
-
-        foreach (var roiNodeVm in roiDrawNodes)
-        {
-            if (roiNodeVm?.Node == null)
-                continue;
-
-            var centerX = GetParameterValue<float>(roiNodeVm.Node, "CenterX");
-            var centerY = GetParameterValue<float>(roiNodeVm.Node, "CenterY");
-            var centerZ = GetParameterValue<float>(roiNodeVm.Node, "CenterZ");
-            var sizeX = GetParameterValue<float>(roiNodeVm.Node, "SizeX");
-            var sizeY = GetParameterValue<float>(roiNodeVm.Node, "SizeY");
-            var sizeZ = GetParameterValue<float>(roiNodeVm.Node, "SizeZ");
-            var radius = GetParameterValue<float>(roiNodeVm.Node, "Radius");
-            var shapeStr = GetParameterValue<string>(roiNodeVm.Node, "Shape") ?? "Box";
-
-            var shape = shapeStr.ToLower() switch
-            {
-                "cylinder" => ROIShape.Cylinder,
-                "sphere" => ROIShape.Sphere,
-                _ => ROIShape.Box
-            };
-
-            var (wireframe, centerPoint) = CreateRoiGeometry(
-                new System.Numerics.Vector3(centerX, centerY, centerZ),
-                new System.Numerics.Vector3(sizeX, sizeY, sizeZ),
-                radius,
-                shape);
-
-            var roiViz = new RoiVisualization
-            {
-                NodeId = roiNodeVm.Node.Id,
-                WireframeGeometry = wireframe,
-                CenterPointGeometry = centerPoint
-            };
-
-            RoiVisualizations.Add(roiViz);
-            
-            // Add 3D models to the collection
-            if (wireframe != null)
-            {
-                RoiModels.Add(new LineGeometryModel3D
-                {
-                    Geometry = wireframe,
-                    Thickness = 3,
-                    Color = System.Windows.Media.Colors.Yellow
-                });
-            }
-            
-            if (centerPoint != null)
-            {
-                var meshModel = new MeshGeometryModel3D
-                {
-                    Geometry = centerPoint
-                };
-                // Convert System.Windows.Media.Color to SharpDX.Color4
-                meshModel.Material = new PhongMaterial { DiffuseColor = new SharpDX.Color4(1.0f, 0.0f, 0.0f, 1.0f) }; // Red
-                RoiModels.Add(meshModel);
-            }
-        }
-        
-        // Clear legacy properties since we're now using the collection
-        RoiWireframeGeometry = null;
-        RoiCenterPointGeometry = null;
     }
 
     public void UpdateRoiFromParameters(NodeViewModel roiNodeVm)
@@ -1384,184 +1178,6 @@ public partial class MainViewModel : ObservableObject
     private void UpdateRoiVisualization(NodeViewModel roiNodeVm)
     {
         UpdateRoiFromParameters(roiNodeVm);
-    }
-
-    private (LineGeometry3D wireframe, MeshGeometry3D centerPoint) CreateRoiGeometry(
-        System.Numerics.Vector3 center, 
-        System.Numerics.Vector3 size, 
-        float radius, 
-        ROIShape shape)
-    {
-        var positions = new Vector3Collection();
-        var indices = new IntCollection();
-
-        if (shape == ROIShape.Box)
-        {
-            // Create box wireframe
-            var hx = size.X / 2;
-            var hy = size.Y / 2;
-            var hz = size.Z / 2;
-
-            // 8 corners of the box
-            var corners = new[]
-            {
-                new Vector3(center.X - hx, center.Y - hy, center.Z - hz),
-                new Vector3(center.X + hx, center.Y - hy, center.Z - hz),
-                new Vector3(center.X + hx, center.Y + hy, center.Z - hz),
-                new Vector3(center.X - hx, center.Y + hy, center.Z - hz),
-                new Vector3(center.X - hx, center.Y - hy, center.Z + hz),
-                new Vector3(center.X + hx, center.Y - hy, center.Z + hz),
-                new Vector3(center.X + hx, center.Y + hy, center.Z + hz),
-                new Vector3(center.X - hx, center.Y + hy, center.Z + hz),
-            };
-
-            foreach (var corner in corners)
-                positions.Add(corner);
-
-            // 12 edges of the box
-            int[] edgeIndices = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
-            foreach (var idx in edgeIndices)
-                indices.Add(idx);
-        }
-        else if (shape == ROIShape.Cylinder)
-        {
-            // Create cylinder wireframe
-            int segments = 32;
-            for (int i = 0; i < segments; i++)
-            {
-                float angle = i * 2 * MathF.PI / segments;
-                float x = center.X + radius * MathF.Cos(angle);
-                float z = center.Z + radius * MathF.Sin(angle);
-
-                // Bottom circle
-                positions.Add(new Vector3(x, center.Y - size.Y / 2, z));
-                // Top circle
-                positions.Add(new Vector3(x, center.Y + size.Y / 2, z));
-            }
-
-            // Bottom and top circles
-            for (int i = 0; i < segments; i++)
-            {
-                int next = (i + 1) % segments;
-                indices.Add(i * 2);
-                indices.Add(next * 2);
-                indices.Add(i * 2 + 1);
-                indices.Add(next * 2 + 1);
-            }
-
-            // Vertical lines
-            for (int i = 0; i < segments; i += segments / 8)
-            {
-                indices.Add(i * 2);
-                indices.Add(i * 2 + 1);
-            }
-        }
-        else if (shape == ROIShape.Sphere)
-        {
-            // Create sphere wireframe
-            int segments = 32;
-            int rings = 16;
-
-            for (int ring = 0; ring <= rings; ring++)
-            {
-                float phi = ring * MathF.PI / rings;
-                for (int seg = 0; seg < segments; seg++)
-                {
-                    float theta = seg * 2 * MathF.PI / segments;
-                    float x = center.X + radius * MathF.Sin(phi) * MathF.Cos(theta);
-                    float y = center.Y + radius * MathF.Cos(phi);
-                    float z = center.Z + radius * MathF.Sin(phi) * MathF.Sin(theta);
-
-                    positions.Add(new Vector3(x, y, z));
-                }
-            }
-
-            // Generate sphere indices
-            for (int ring = 0; ring < rings; ring++)
-            {
-                for (int seg = 0; seg < segments; seg++)
-                {
-                    int current = ring * (segments + 1) + seg;
-                    int next = current + (segments + 1);
-
-                    indices.Add(current);
-                    indices.Add(next);
-                    indices.Add(current + 1);
-
-                    indices.Add(current + 1);
-                    indices.Add(next);
-                    indices.Add(next + 1);
-                }
-            }
-        }
-
-        var wireframe = new LineGeometry3D
-        {
-            Positions = positions,
-            Indices = indices
-        };
-
-        // Create a tiny center point sphere (visual dot), independent of ROI radius
-        var centerPoint = CreateSphereGeometry(center, RoiCenterSphereRadius, 6, 3);
-
-        return (wireframe, centerPoint);
-    }
-
-    private MeshGeometry3D CreateSphereGeometry(System.Numerics.Vector3 center, float radius, int segments, int rings)
-    {
-        var positions = new Vector3Collection();
-        var indices = new IntCollection();
-        var normals = new Vector3Collection();
-        var texCoords = new Vector2Collection();
-
-        // Generate sphere vertices
-        for (int ring = 0; ring <= rings; ring++)
-        {
-            float phi = ring * MathF.PI / rings;
-            for (int seg = 0; seg <= segments; seg++)
-            {
-                float theta = seg * 2 * MathF.PI / segments;
-                float x = center.X + radius * MathF.Sin(phi) * MathF.Cos(theta);
-                float y = center.Y + radius * MathF.Cos(phi);
-                float z = center.Z + radius * MathF.Sin(phi) * MathF.Sin(theta);
-
-                positions.Add(new Vector3(x, y, z));
-
-                // Normal
-                var normal = System.Numerics.Vector3.Normalize(new System.Numerics.Vector3(
-                    x - center.X, y - center.Y, z - center.Z));
-                normals.Add(new Vector3(normal.X, normal.Y, normal.Z));
-
-                // Texture coordinates
-                texCoords.Add(new SharpDX.Vector2((float)seg / segments, (float)ring / rings));
-            }
-        }
-
-        // Generate sphere indices
-        for (int ring = 0; ring < rings; ring++)
-        {
-            for (int seg = 0; seg < segments; seg++)
-            {
-                int current = ring * (segments + 1) + seg;
-                int next = current + (segments + 1);
-
-                indices.Add(current);
-                indices.Add(next);
-                indices.Add(current + 1);
-
-                indices.Add(current + 1);
-                indices.Add(next);
-                indices.Add(next + 1);
-            }
-        }
-
-        return new MeshGeometry3D
-        {
-            Positions = positions,
-            Indices = indices,
-            Normals = normals,
-            TextureCoordinates = texCoords
-        };
     }
 
     private T GetParameterValue<T>(INode node, string paramName)
@@ -1917,14 +1533,6 @@ public class Matrix4x4JsonConverter : JsonConverter<System.Numerics.Matrix4x4>
         writer.WriteNumber("M44", value.M44);
         writer.WriteEndObject();
     }
-}
-
-// Helper class to hold ROI visualization data
-public class RoiVisualization : ObservableObject
-{
-    public string NodeId { get; set; } = string.Empty;
-    public LineGeometry3D? WireframeGeometry { get; set; }
-    public MeshGeometry3D? CenterPointGeometry { get; set; }
 }
 
 public partial class NodeViewModel : ObservableObject

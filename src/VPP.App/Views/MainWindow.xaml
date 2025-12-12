@@ -373,8 +373,8 @@
                             <helix:Viewport3DX x:Name="Viewport3D"
                                            ShowCoordinateSystem="True"
                                            ShowViewCube="True"
-                                           Camera="{Binding Camera}"
-                                           EffectsManager="{Binding EffectsManager}"
+                                           Camera="{Binding Scene.Camera}"
+                                           EffectsManager="{Binding Scene.EffectsManager}"
                                            EnableSwapChainRendering="True"
                                            MSAA="Maximum"
                                            BackgroundColor="#101014"
@@ -387,30 +387,30 @@
                             <helix:DirectionalLight3D Direction="1,1,1" Color="#404040"/>
                             <helix:AmbientLight3D Color="#303030"/>
                             <!-- Separate colored origin axes -->
-                            <helix:LineGeometryModel3D Geometry="{Binding OriginXGeometry}" Thickness="2" Color="Red"/>
-                            <helix:LineGeometryModel3D Geometry="{Binding OriginYGeometry}" Thickness="2" Color="Green"/>
-                            <helix:LineGeometryModel3D Geometry="{Binding OriginZGeometry}" Thickness="2" Color="Blue"/>
+                            <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginXGeometry}" Thickness="2" Color="Red"/>
+                            <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginYGeometry}" Thickness="2" Color="Green"/>
+                            <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginZGeometry}" Thickness="2" Color="Blue"/>
                             <helix:PointGeometryModel3D x:Name="PointCloudVisual"
-                                                        Geometry="{Binding PointCloudGeometry}"
-                                                        Color="{Binding PointCloudColor}"
-                                                        Size="{Binding PointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
+                                                        Geometry="{Binding Scene.PointCloudGeometry}"
+                                                        Color="{Binding Scene.PointCloudColor}"
+                                                        Size="{Binding Scene.PointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
                             <!-- Detected Circle Points (shown in different color) -->
                             <helix:PointGeometryModel3D x:Name="DetectedCircleVisual"
-                                                        Geometry="{Binding DetectedCircleGeometry}"
-                                                        Color="{Binding DetectedCircleColor}"
-                                                        Size="{Binding DetectedCirclePointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
+                                                        Geometry="{Binding Scene.DetectedCircleGeometry}"
+                                                        Color="{Binding Scene.DetectedCircleColor}"
+                                                        Size="{Binding Scene.DetectedCirclePointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
                             <!-- Detected Circle Outline (red circle) -->
-                            <helix:LineGeometryModel3D Geometry="{Binding DetectedCircleOutlineGeometry}"
+                            <helix:LineGeometryModel3D Geometry="{Binding Scene.DetectedCircleOutlineGeometry}"
                                                       Thickness="4"
                                                       Color="Red"/>
                             <!-- Multiple ROI Models -->
-                            <helix:GroupModel3D ItemsSource="{Binding RoiModels}"/>
+                            <helix:GroupModel3D ItemsSource="{Binding Scene.RoiModels}"/>
                             <!-- Legacy Single ROI Wireframe (fallback for compatibility) -->
-                            <helix:LineGeometryModel3D Geometry="{Binding RoiWireframeGeometry}"
+                            <helix:LineGeometryModel3D Geometry="{Binding Scene.RoiWireframeGeometry}"
                                                       Thickness="3"
-                                                      Color="{Binding RoiWireframeColor}"/>
+                                                      Color="{Binding Scene.RoiWireframeColor}"/>
                             <!-- Legacy Single ROI Center Point (fallback for compatibility) -->
-                            <helix:MeshGeometryModel3D Geometry="{Binding RoiCenterPointGeometry}">
+                            <helix:MeshGeometryModel3D Geometry="{Binding Scene.RoiCenterPointGeometry}">
                                 <helix:MeshGeometryModel3D.Material>
                                     <helix:PhongMaterial DiffuseColor="Red"/>
                                 </helix:MeshGeometryModel3D.Material>

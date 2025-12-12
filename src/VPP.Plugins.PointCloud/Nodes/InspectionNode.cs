@@ -1,5 +1,6 @@
 using System.Numerics;
 using VPP.Core.Attributes;
+using VPP.Core.Interfaces;
 using VPP.Core.Models;
 using VPP.Plugins.PointCloud.Models;
 using ExecutionContext = VPP.Core.Models.ExecutionContext;
@@ -7,8 +8,15 @@ using ExecutionContext = VPP.Core.Models.ExecutionContext;
 namespace VPP.Plugins.PointCloud.Nodes;
 
 [NodeInfo("Spec Inspection", "Point Cloud/Inspection", "Inspect circle radius against expected value within tolerance")]
-public class InspectionNode : NodeBase
+public class InspectionNode : NodeBase, IGraphAwareNode
 {
+    private NodeGraph? _graph;
+
+    public void SetGraph(NodeGraph graph)
+    {
+        _graph = graph;
+    }
+
     public InspectionNode()
     {
         // Auto-inspection mode
@@ -29,10 +37,10 @@ public class InspectionNode : NodeBase
         if (!autoInspect)
         {
             // Manual mode - just store circle result for later manual inspection
-            var circle = context.Get<CircleDetectionResult>(ExecutionContext.CircleResultKey);
+            var circle = GetConnectedCircleResult(context);
             if (circle != null)
             {
-                context.Set("InspectionInputCircle", circle);
+                context.Set($"InspectionInputCircle_{Id}", circle);
             }
             return Task.CompletedTask;
         }
@@ -41,10 +49,32 @@ public class InspectionNode : NodeBase
         return Task.Run(() => PerformInspection(context), cancellationToken);
     }
 
+    private CircleDetectionResult? GetConnectedCircleResult(ExecutionContext context)
+    {
+        if (_graph == null) return null;
+
+        // Find connected Circle Detection node
+        var circleNodeId = _graph.Connections
+            .Where(c => c.TargetNodeId == Id)
+            .Select(c => c.SourceNodeId)
+            .FirstOrDefault(id => 
+            {
+                var node = _graph.Nodes.FirstOrDefault(n => n.Id == id);
+                return node?.Name == "Circle Detection";
+            });
+
+        if (circleNodeId != null)
+        {
+            return context.Get<CircleDetectionResult>($"{ExecutionContext.CircleResultKey}_{circleNodeId}");
+        }
+
+        return null;
+    }
+
     public void PerformInspection(ExecutionContext context)
     {
-        var circle = context.Get<CircleDetectionResult>(ExecutionContext.CircleResultKey)
-                     ?? context.Get<CircleDetectionResult>("InspectionInputCircle");
+        var circle = GetConnectedCircleResult(context)
+                     ?? context.Get<CircleDetectionResult>($"InspectionInputCircle_{Id}");
 
         if (circle == null)
             throw new InvalidOperationException("No circle detection result found in context. Run Circle Detection node first.");
@@ -75,7 +105,8 @@ public class InspectionNode : NodeBase
             ? $"Radius OK: {circle.Radius:F2}mm (Expected {expectedRadius:F2}mm ±{radiusTolerance:F2}mm)"
             : $"Radius NG: {string.Join("; ", result.Failures)}";
 
-        // Store in context
-        context.Set("InspectionResult", result);
+        // Store in context with unique key
+        context.Set($"InspectionResult_{Id}", result);
+        context.Set("InspectionResult", result); // Legacy
     }
 }

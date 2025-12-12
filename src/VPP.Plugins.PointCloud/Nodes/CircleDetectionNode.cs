@@ -1,5 +1,6 @@
 using System.Numerics;
 using VPP.Core.Attributes;
+using VPP.Core.Interfaces;
 using VPP.Core.Models;
 using VPP.Plugins.PointCloud.Models;
 using ExecutionContext = VPP.Core.Models.ExecutionContext;
@@ -7,8 +8,15 @@ using ExecutionContext = VPP.Core.Models.ExecutionContext;
 namespace VPP.Plugins.PointCloud.Nodes;
 
 [NodeInfo("Circle Detection", "Point Cloud/Detection", "Detect circle in point cloud using RANSAC")]
-public class CircleDetectionNode : NodeBase
+public class CircleDetectionNode : NodeBase, IGraphAwareNode
 {
+    private NodeGraph? _graph;
+
+    public void SetGraph(NodeGraph graph)
+    {
+        _graph = graph;
+    }
+
     public CircleDetectionNode()
     {
         // Detection mode parameter
@@ -30,17 +38,17 @@ public class CircleDetectionNode : NodeBase
 
     protected override Task ExecuteCoreAsync(ExecutionContext context, CancellationToken cancellationToken)
     {
-        // STRICT: Use only ROI filtered cloud. Do not fall back to original point cloud.
-        var cloud = context.Get<PointCloudData>(ExecutionContext.FilteredCloudKey);
+        // Get filtered cloud from connected ROI Filter node
+        var cloud = GetConnectedFilteredCloud(context);
 
         // If no filtered cloud, skip detection and allow UI to show full cloud.
         if (cloud == null || cloud.Count < 3)
         {
             // Ensure previous detection visuals are cleared
-            context.Set(ExecutionContext.CircleResultKey, new CircleDetectionResult { FitError = float.MaxValue, InlierCount = 0 });
-            context.Set("DetectedCircleCloud", new PointCloudData());
+            context.Set($"{ExecutionContext.CircleResultKey}_{Id}", new CircleDetectionResult { FitError = float.MaxValue, InlierCount = 0 });
+            context.Set($"DetectedCircleCloud_{Id}", new PointCloudData());
             // Store that detection input is missing (for UI logic)
-            context.Set<PointCloudData>("CircleDetectionInputCloud", null);
+            context.Set<PointCloudData>($"CircleDetectionInputCloud_{Id}", null);
             return Task.CompletedTask;
         }
 
@@ -49,7 +57,7 @@ public class CircleDetectionNode : NodeBase
         // If auto-detect is off, skip detection during normal execution; store cloud for manual detection.
         if (!autoDetect)
         {
-            context.Set("CircleDetectionInputCloud", cloud);
+            context.Set($"CircleDetectionInputCloud_{Id}", cloud);
             return Task.CompletedTask;
         }
 
@@ -57,6 +65,28 @@ public class CircleDetectionNode : NodeBase
         PerformDetection(context, cloud, cancellationToken);
 
         return Task.CompletedTask;
+    }
+
+    private PointCloudData? GetConnectedFilteredCloud(ExecutionContext context)
+    {
+        if (_graph == null) return null;
+
+        // Find connected ROI Filter node
+        var roiFilterNodeId = _graph.Connections
+            .Where(c => c.TargetNodeId == Id)
+            .Select(c => c.SourceNodeId)
+            .FirstOrDefault(id => 
+            {
+                var node = _graph.Nodes.FirstOrDefault(n => n.Id == id);
+                return node?.Name == "ROI Filter";
+            });
+
+        if (roiFilterNodeId != null)
+        {
+            return context.Get<PointCloudData>($"{ExecutionContext.FilteredCloudKey}_{roiFilterNodeId}");
+        }
+
+        return null;
     }
 
     public void PerformDetection(ExecutionContext context, PointCloudData cloud, CancellationToken cancellationToken)
@@ -67,26 +97,28 @@ public class CircleDetectionNode : NodeBase
         var maxRadius = GetParameter<float>("MaxRadius");
         var minInlierRatio = GetParameter<float>("MinInlierRatio");
 
-        // Try to get ROI to guide plane selection
-        var roi = context.Get<ROI3D>(ExecutionContext.ROIKey);
+        // Try to get ROI to guide plane selection from connected filter
+        var roi = GetConnectedRoi(context);
 
         // Log input data for debugging
-        Console.WriteLine($"Circle Detection: Processing {cloud.Points.Count} points");
-        Console.WriteLine($"Parameters: MaxIter={maxIterations}, Threshold={threshold}mm, Radius=[{minRadius}, {maxRadius}]mm, MinInlierRatio={minInlierRatio}");
+        System.Diagnostics.Debug.WriteLine($"Circle Detection: Processing {cloud.Points.Count} points");
+        System.Diagnostics.Debug.WriteLine($"Parameters: MaxIter={maxIterations}, Threshold={threshold}mm, Radius=[{minRadius}, {maxRadius}]mm, MinInlierRatio={minInlierRatio}");
 
         var result = DetectCircleRANSAC(cloud.Points, maxIterations, threshold, minRadius, maxRadius, minInlierRatio, cancellationToken, roi);
 
         // Log detection result
         if (result.InlierCount > 0)
         {
-            Console.WriteLine($"? Circle detected: Radius={result.Radius:F2}mm, Center=({result.Center.X:F1}, {result.Center.Y:F1}, {result.Center.Z:F1}), Inliers={result.InlierCount}/{cloud.Points.Count}");
+            System.Diagnostics.Debug.WriteLine($"? Circle detected: Radius={result.Radius:F2}mm, Center=({result.Center.X:F1}, {result.Center.Y:F1}, {result.Center.Z:F1}), Inliers={result.InlierCount}/{cloud.Points.Count}");
         }
         else
         {
-            Console.WriteLine($"? Circle detection failed: No valid circle found");
+            System.Diagnostics.Debug.WriteLine($"? Circle detection failed: No valid circle found");
         }
 
-        // Store result in context
+        // Store result in context with unique key
+        context.Set($"{ExecutionContext.CircleResultKey}_{Id}", result);
+        // Also set global key for backward compatibility/UI if needed (though UI should use specific keys now)
         context.Set(ExecutionContext.CircleResultKey, result);
         
         // Store detected circle points for visualization (always store, even if empty)
@@ -97,16 +129,41 @@ public class CircleDetectionNode : NodeBase
                 Points = result.InlierPoints.ToList()
             };
             detectedCircleCloud.ComputeBoundingBox();
-            context.Set("DetectedCircleCloud", detectedCircleCloud);
+            context.Set($"DetectedCircleCloud_{Id}", detectedCircleCloud);
+            context.Set("DetectedCircleCloud", detectedCircleCloud); // Legacy
         }
         else
         {
             // Clear previous detection if no circle found
-            context.Set("DetectedCircleCloud", new PointCloudData());
+            context.Set($"DetectedCircleCloud_{Id}", new PointCloudData());
+            context.Set("DetectedCircleCloud", new PointCloudData()); // Legacy
         }
     }
 
+    private ROI3D? GetConnectedRoi(ExecutionContext context)
+    {
+        if (_graph == null) return null;
+
+        // Find connected ROI Filter node
+        var roiFilterNodeId = _graph.Connections
+            .Where(c => c.TargetNodeId == Id)
+            .Select(c => c.SourceNodeId)
+            .FirstOrDefault(id => 
+            {
+                var node = _graph.Nodes.FirstOrDefault(n => n.Id == id);
+                return node?.Name == "ROI Filter";
+            });
+
+        if (roiFilterNodeId != null)
+        {
+            return context.Get<ROI3D>($"{ExecutionContext.ROIKey}_{roiFilterNodeId}");
+        }
+
+        return null;
+    }
+
     private CircleDetectionResult DetectCircleRANSAC(
+
         List<Vector3> points, int maxIter, float threshold,
         float minRadius, float maxRadius, float minInlierRatio, CancellationToken ct, ROI3D? roi = null)
     {

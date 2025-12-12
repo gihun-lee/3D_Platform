@@ -59,9 +59,8 @@ public class ROIDrawNode : NodeBase
         // Set the output port value
         SetOutputValue("ROI", roi);
 
-        // ONLY store ROI definition - do NOT filter the point cloud
-        // Let the ROI Filter node do the actual filtering
-        context.Set(ExecutionContext.ROIKey, roi);
+        // Store ROI definition with unique key for this node
+        context.Set($"{ExecutionContext.ROIKey}_{Id}", roi);
 
         return Task.CompletedTask;
     }
