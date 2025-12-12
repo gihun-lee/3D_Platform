@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "XkcaO+UkITY=",
+  "dgSpecHash": "nmPUMU7MaRw=",
   "success": true,
-  "projectFilePath": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Core\\VPP.Core.csproj",
+  "projectFilePath": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Core\\VPP.Core.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\user\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.2\\communitytoolkit.mvvm.8.2.2.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",

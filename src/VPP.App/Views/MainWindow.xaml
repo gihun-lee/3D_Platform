@@ -68,17 +68,16 @@
                     <TextBlock Text="Node Graph Editor" FontSize="14" FontWeight="Bold"
                                Foreground="White" Padding="10"/>
 
-                    <!-- Node Canvas -->
-                    <Canvas Grid.Row="1" x:Name="NodeCanvas" Background="#252525" ClipToBounds="True"
-                            MouseRightButtonDown="NodeCanvas_MouseRightButtonDown"
-                            MouseLeftButtonDown="NodeCanvas_MouseLeftButtonDown"
-                            MouseWheel="NodeCanvas_MouseWheel">
-                        <Canvas.RenderTransform>
-                            <TranslateTransform x:Name="NodeCanvasTranslateTransform" X="0" Y="0"/>
-                        </Canvas.RenderTransform>
-
+                    <!-- Node Graph Viewport -->
+                    <Grid Grid.Row="1" x:Name="NodeGraphViewport" Background="#252525" ClipToBounds="True"
+                          MouseRightButtonDown="NodeCanvas_MouseRightButtonDown"
+                          MouseLeftButtonDown="NodeCanvas_MouseLeftButtonDown"
+                          MouseWheel="NodeCanvas_MouseWheel"
+                          MouseMove="NodeCanvas_MouseMove"
+                          MouseLeftButtonUp="NodeCanvas_MouseLeftButtonUp">
+                        
                         <!-- Context Menu -->
-                        <Canvas.ContextMenu>
+                        <Grid.ContextMenu>
                             <ContextMenu x:Name="AddNodeContextMenu" Background="#2D2D2D" Opened="AddNodeContextMenu_Opened">
                                 <ContextMenu.Template>
                                     <ControlTemplate TargetType="ContextMenu">
@@ -115,7 +114,13 @@
                                     </ControlTemplate>
                                 </ContextMenu.Template>
                             </ContextMenu>
-                        </Canvas.ContextMenu>
+                        </Grid.ContextMenu>
+
+                        <!-- Node Canvas -->
+                        <Canvas x:Name="NodeCanvas" Background="Transparent">
+                            <Canvas.RenderTransform>
+                                <TranslateTransform x:Name="NodeCanvasTranslateTransform" X="0" Y="0"/>
+                            </Canvas.RenderTransform>
 
                         <!-- Connection Lines -->
                         <ItemsControl ItemsSource="{Binding Connections}">
@@ -254,6 +259,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </Canvas>
+                    </Grid>
                 </Grid>
             </Border>
 

@@ -64,12 +64,14 @@ public partial class MainWindow : Window
     private System.Windows.Media.Media3D.Point3D _cameraStartPosition;
     private System.Windows.Media.Media3D.Vector3D _cameraStartLookDirection;
 
+    // Canvas panning state
+    private bool _isPanningCanvas;
+    private System.Windows.Point _canvasPanStartMousePos;
+    private System.Windows.Point _canvasPanStartOffset;
+
     public MainWindow()
     {
         InitializeComponent();
-
-        NodeCanvas.MouseMove += NodeCanvas_MouseMove;
-        NodeCanvas.MouseLeftButtonUp += NodeCanvas_MouseLeftButtonUp;
 
         // Add Viewport3D event handlers
         Viewport3D.MouseMove += Viewport3D_MouseMove;
@@ -348,8 +350,19 @@ public partial class MainWindow : Window
 
     private void NodeCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // Check for Spacebar panning first
+        if (Keyboard.IsKeyDown(Key.Space))
+        {
+            _isPanningCanvas = true;
+            _canvasPanStartMousePos = e.GetPosition(this);
+            _canvasPanStartOffset = new Point(NodeCanvasTranslateTransform.X, NodeCanvasTranslateTransform.Y);
+            NodeCanvas.CaptureMouse();
+            e.Handled = true;
+            return;
+        }
+
         // Only start box selection if clicking directly on the canvas background
-        if (e.OriginalSource == NodeCanvas || e.OriginalSource == sender)
+        if (e.OriginalSource == NodeCanvas || e.OriginalSource == NodeGraphViewport || e.OriginalSource == sender)
         {
             _isBoxSelecting = true;
             _boxSelectionStart = e.GetPosition(NodeCanvas);
@@ -365,6 +378,16 @@ public partial class MainWindow : Window
 
     private void NodeCanvas_MouseMove(object sender, MouseEventArgs e)
     {
+        if (_isPanningCanvas)
+        {
+            var currentPos = e.GetPosition(this);
+            var delta = currentPos - _canvasPanStartMousePos;
+            NodeCanvasTranslateTransform.X = _canvasPanStartOffset.X + delta.X;
+            NodeCanvasTranslateTransform.Y = _canvasPanStartOffset.Y + delta.Y;
+            e.Handled = true;
+            return;
+        }
+
         if (_isDraggingConnection)
         {
             var currentPos = e.GetPosition(NodeCanvas);
@@ -1277,6 +1300,14 @@ public partial class MainWindow : Window
 
     private void NodeCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isPanningCanvas)
+        {
+            _isPanningCanvas = false;
+            NodeCanvas.ReleaseMouseCapture();
+            e.Handled = true;
+            return;
+        }
+
         if (_isDraggingConnection)
         {
             // Fallback: if user released over canvas (target ellipse didn't get MouseUp) perform hit test

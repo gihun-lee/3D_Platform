@@ -4,16 +4,16 @@
 winexe
 C#
 .cs
-C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.App\obj\Release\net8.0-windows\
+C:\Users\user\Documents\GitLab\3D_Platform\src\VPP.App\obj\Release\net8.0-windows\
 VPP.App
 none
 false
 TRACE;RELEASE;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
-C:\Users\user\Documents\GitHub\3D_Platform\src\VPP.App\App.xaml
+C:\Users\user\Documents\GitLab\3D_Platform\src\VPP.App\App.xaml
 3-745887258
 
 71858093818
-218-1122335486
+218-2016473936
 Resources\Styles.xaml;Views\MainWindow.xaml;Views\MatrixEditWindow.xaml;
 
 False

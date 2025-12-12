@@ -1,9 +1,9 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\",
+  "WorkspaceRootPath": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
@@ -13,46 +13,46 @@
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\user\\AppData\\Local\\Temp\\.vsdbgsrc\\aad6be2495d0a786b94b3514a5b6903407fe2d6a75ad7e505df6a9d895927867\\XamlReader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\resources\\styles.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\resources\\styles.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\resources\\styles.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\user\\AppData\\Local\\Temp\\.vsdbgsrc\\ce54ac89ac835309b937cf94097737f1032ed54e108048ed23660a4584ac4df8\\DUCE.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\views\\matrixeditwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\views\\matrixeditwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\views\\matrixeditwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\inspectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\inspectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|solutionrelative:src\\vpp.plugins.pointcloud\\nodes\\inspectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.app\\converters\\converters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.app\\converters\\converters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C3D4E5F6-A7B8-9012-CDEF-123456789012}|src\\VPP.App\\VPP.App.csproj|solutionrelative:src\\vpp.app\\converters\\converters.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\roidrawnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\roidrawnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|solutionrelative:src\\vpp.plugins.pointcloud\\nodes\\roidrawnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\roifilternode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\roifilternode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|solutionrelative:src\\vpp.plugins.pointcloud\\nodes\\roifilternode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\github\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\circledetectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|c:\\users\\user\\documents\\gitlab\\3d_platform\\src\\vpp.plugins.pointcloud\\nodes\\circledetectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{B2C3D4E5-F6A7-8901-BCDE-F12345678901}|src\\VPP.Plugins.PointCloud\\VPP.Plugins.PointCloud.csproj|solutionrelative:src\\vpp.plugins.pointcloud\\nodes\\circledetectionnode.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -69,9 +69,9 @@
               "$type": "Document",
               "DocumentIndex": 12,
               "Title": "ROIFilterNode.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
               "RelativeDocumentMoniker": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
               "ViewState": "AgIAAIUAAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -81,9 +81,9 @@
               "$type": "Document",
               "DocumentIndex": 11,
               "Title": "ROIDrawNode.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
               "RelativeDocumentMoniker": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
               "ViewState": "AgIAADwAAAAAAAAAAEBVwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -93,9 +93,9 @@
               "$type": "Document",
               "DocumentIndex": 6,
               "Title": "App.xaml",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\App.xaml",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\App.xaml",
               "RelativeDocumentMoniker": "src\\VPP.App\\App.xaml",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\App.xaml",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\App.xaml",
               "RelativeToolTip": "src\\VPP.App\\App.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2025-11-28T02:46:20.511Z",
@@ -105,9 +105,9 @@
               "$type": "Document",
               "DocumentIndex": 7,
               "Title": "MatrixEditWindow.xaml",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MatrixEditWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MatrixEditWindow.xaml",
               "RelativeDocumentMoniker": "src\\VPP.App\\Views\\MatrixEditWindow.xaml",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MatrixEditWindow.xaml",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MatrixEditWindow.xaml",
               "RelativeToolTip": "src\\VPP.App\\Views\\MatrixEditWindow.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2025-11-28T02:46:12.49Z"
@@ -116,34 +116,34 @@
               "$type": "Document",
               "DocumentIndex": 4,
               "Title": "MainWindow.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "src\\VPP.App\\Views\\MainWindow.xaml.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml.cs",
               "RelativeToolTip": "src\\VPP.App\\Views\\MainWindow.xaml.cs",
-              "ViewState": "AgIAADkFAAAAAAAAAABBwHgAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAEkAAAAAAAAAAIBJwHoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-28T02:45:07.567Z"
+              "WhenOpened": "2025-11-28T02:45:07.567Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 8,
               "Title": "MainViewModel.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\ViewModels\\MainViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\ViewModels\\MainViewModel.cs",
               "RelativeDocumentMoniker": "src\\VPP.App\\ViewModels\\MainViewModel.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\ViewModels\\MainViewModel.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\ViewModels\\MainViewModel.cs",
               "RelativeToolTip": "src\\VPP.App\\ViewModels\\MainViewModel.cs",
               "ViewState": "AgIAANIHAAAAAAAAAABhwNkHAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-28T02:44:52.95Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-28T02:44:52.95Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "MainWindow.xaml",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml",
               "RelativeDocumentMoniker": "src\\VPP.App\\Views\\MainWindow.xaml",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Views\\MainWindow.xaml",
               "RelativeToolTip": "src\\VPP.App\\Views\\MainWindow.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2025-11-25T03:36:25.833Z",
@@ -153,9 +153,9 @@
               "$type": "Document",
               "DocumentIndex": 13,
               "Title": "CircleDetectionNode.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
               "RelativeDocumentMoniker": "src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
               "ViewState": "AgIAADoBAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -165,9 +165,9 @@
               "$type": "Document",
               "DocumentIndex": 3,
               "Title": "Styles.xaml",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Resources\\Styles.xaml",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Resources\\Styles.xaml",
               "RelativeDocumentMoniker": "src\\VPP.App\\Resources\\Styles.xaml",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Resources\\Styles.xaml",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Resources\\Styles.xaml",
               "RelativeToolTip": "src\\VPP.App\\Resources\\Styles.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2025-11-28T06:47:29.392Z",
@@ -177,9 +177,9 @@
               "$type": "Document",
               "DocumentIndex": 9,
               "Title": "InspectionNode.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
               "RelativeDocumentMoniker": "src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
               "ViewState": "AgIAAEwAAAAAAAAAAIBZwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -214,9 +214,9 @@
               "$type": "Document",
               "DocumentIndex": 10,
               "Title": "Converters.cs",
-              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Converters\\Converters.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Converters\\Converters.cs",
               "RelativeDocumentMoniker": "src\\VPP.App\\Converters\\Converters.cs",
-              "ToolTip": "C:\\Users\\user\\Documents\\GitHub\\3D_Platform\\src\\VPP.App\\Converters\\Converters.cs",
+              "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\Converters\\Converters.cs",
               "RelativeToolTip": "src\\VPP.App\\Converters\\Converters.cs",
               "ViewState": "AgIAAFkAAAAAAAAAAEBUwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VPP.Plugins.PointCloud")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00ef87a05543a0073c9453ff30312a8ecc12fd71")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+db40344ad4e1acdc7c98973583e51ef31160b429")]
 [assembly: System.Reflection.AssemblyProductAttribute("VPP.Plugins.PointCloud")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VPP.Plugins.PointCloud")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
