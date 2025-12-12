@@ -20,23 +20,6 @@ public class ROIFilterNode : NodeBase, IGraphAwareNode
     public ROIFilterNode()
     {
         AddInputPort<ROI3D>("ROI", "The ROI to use for filtering.");
-        // Enable/Disable filter
-        AddParameter<bool>("Enabled", true, required: false, displayName: "Enabled",
-            description: "Enable or disable ROI filtering");
-
-        // Parameters for ROI definition
-        AddParameter<float>("SizeX", 100f, required: false, displayName: "Size X (mm)",
-            description: "ROI width in X direction");
-        AddParameter<float>("SizeY", 100f, required: false, displayName: "Size Y (mm)",
-            description: "ROI width in Y direction");
-        AddParameter<float>("SizeZ", 50f, required: false, displayName: "Size Z (mm)",
-            description: "ROI height in Z direction");
-        AddParameter<float>("CenterX", 0f, required: false, displayName: "Center X",
-            description: "ROI center X coordinate");
-        AddParameter<float>("CenterY", 0f, required: false, displayName: "Center Y",
-            description: "ROI center Y coordinate");
-        AddParameter<float>("CenterZ", 0f, required: false, displayName: "Center Z",
-            description: "ROI center Z coordinate");
     }
 
     protected override Task ExecuteCoreAsync(ExecutionContext context, CancellationToken cancellationToken)
@@ -47,21 +30,6 @@ public class ROIFilterNode : NodeBase, IGraphAwareNode
         if (cloud == null)
             throw new InvalidOperationException("No point cloud found in context. Run Import Point Cloud node first.");
 
-        // Check if filter is enabled
-        var enabled = GetParameter<bool>("Enabled");
-        if (!enabled)
-        {
-            // Filter is OFF - pass through original data without filtering
-            context.Set($"{ExecutionContext.FilteredCloudKey}_{Id}", cloud);
-            // Still try to get and store ROI for visualization
-            var existingRoi = GetConnectedRoi(context);
-            if (existingRoi != null)
-            {
-                context.Set($"{ExecutionContext.ROIKey}_{Id}", existingRoi);
-            }
-            return Task.CompletedTask;
-        }
-
         // Try to get ROI from the input port first
         var roi = GetInputValue<ROI3D>("ROI");
 
@@ -69,40 +37,13 @@ public class ROIFilterNode : NodeBase, IGraphAwareNode
         if (roi == null)
         {
             roi = GetConnectedRoi(context);
+        }
 
-            // If no ROI in context, create one from parameters
-            if (roi == null)
-            {
-                roi = new ROI3D
-                {
-                    Shape = ROIShape.Box,
-                    Center = new Vector3(
-                        GetParameter<float>("CenterX"),
-                        GetParameter<float>("CenterY"),
-                        GetParameter<float>("CenterZ")
-                    ),
-                    Size = new Vector3(
-                        GetParameter<float>("SizeX"),
-                        GetParameter<float>("SizeY"),
-                        GetParameter<float>("SizeZ")
-                    )
-                };
-
-                // Auto-center ROI at point cloud centroid if center is at origin
-                if (roi.Center == Vector3.Zero && cloud.Points.Count > 0)
-                {
-                    var centroid = Vector3.Zero;
-                    foreach (var pt in cloud.Points)
-                        centroid += pt;
-                    centroid /= cloud.Points.Count;
-                    roi.Center = centroid;
-
-                    // Update parameters to reflect calculated center
-                    SetParameter("CenterX", centroid.X);
-                    SetParameter("CenterY", centroid.Y);
-                    SetParameter("CenterZ", centroid.Z);
-                }
-            }
+        if (roi == null)
+        {
+            // If no ROI is connected, we cannot filter. Pass through original data.
+            context.Set($"{ExecutionContext.FilteredCloudKey}_{Id}", cloud);
+            return Task.CompletedTask;
         }
 
         var filtered = new PointCloudData();
