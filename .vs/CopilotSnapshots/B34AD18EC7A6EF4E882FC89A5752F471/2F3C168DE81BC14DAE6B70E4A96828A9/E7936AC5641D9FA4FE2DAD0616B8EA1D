@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -79,7 +79,6 @@ public partial class MainWindow : Window
 
         // Add keyboard event handler
         this.KeyDown += MainWindow_KeyDown;
-        this.KeyUp += MainWindow_KeyUp;
     }
 
     private void Viewport3D_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -1142,13 +1141,6 @@ public partial class MainWindow : Window
         if (ViewModel == null)
             return;
 
-        // Space key: Panning mode cursor
-        if (e.Key == Key.Space)
-        {
-            NodeGraphViewport.Cursor = Cursors.SizeAll;
-            NodeGraphViewport.ForceCursor = true;
-        }
-
         // Delete key: delete all selected nodes
         if (e.Key == Key.Delete)
         {
@@ -1246,15 +1238,6 @@ public partial class MainWindow : Window
             ViewModel.UpdateRoiFromParameters(ViewModel.SelectedRoiNode);
             ViewModel.StatusMessage = $"ROI Center moved to ({centerXParam.Value:F2}, {centerYParam.Value:F2}, {centerZParam.Value:F2})";
             e.Handled = true;
-        }
-    }
-
-    private void MainWindow_KeyUp(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Space)
-        {
-            NodeGraphViewport.Cursor = Cursors.Arrow;
-            NodeGraphViewport.ForceCursor = false;
         }
     }
 

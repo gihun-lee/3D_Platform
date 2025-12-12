@@ -1,4 +1,4 @@
-<Window x:Class="VPP.App.Views.MainWindow"
+﻿<Window x:Class="VPP.App.Views.MainWindow"
         x:Name="RootWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -37,13 +37,13 @@
         <!-- Toolbar -->
         <Border Grid.Row="0" Background="#2D2D2D" Padding="10">
             <StackPanel Orientation="Horizontal">
-                <Button Content="Create Workflow" Command="{Binding CreateDefaultWorkflowCommand}" Focusable="False"
+                <Button Content="Create Workflow" Command="{Binding CreateDefaultWorkflowCommand}"
                         Background="#2196F3" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Execute" Command="{Binding ExecuteGraphCommand}" Focusable="False"
+                <Button Content="Execute" Command="{Binding ExecuteGraphCommand}"
                         Background="#FF9800" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Save" Command="{Binding SaveWorkflowCommand}" Focusable="False"
+                <Button Content="Save" Command="{Binding SaveWorkflowCommand}"
                         Background="#4CAF50" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Load" Command="{Binding LoadWorkflowCommand}" Focusable="False"
+                <Button Content="Load" Command="{Binding LoadWorkflowCommand}"
                         Background="#00BCD4" Foreground="White" Padding="12,8"/>
             </StackPanel>
         </Border>
@@ -289,18 +289,18 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="5"
                                     Visibility="{Binding IsRoiDrawingMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="ROI Shape:" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Button Content="Box" Width="60" Margin="2" Background="#4CAF50" Foreground="White" Focusable="False"
+                            <Button Content="Box" Width="60" Margin="2" Background="#4CAF50" Foreground="White"
                                     Click="RoiShapeBox_Click" ToolTip="Draw 3D Box ROI"/>
-                            <Button Content="Cylinder" Width="70" Margin="2" Background="#2196F3" Foreground="White" Focusable="False"
+                            <Button Content="Cylinder" Width="70" Margin="2" Background="#2196F3" Foreground="White"
                                     Click="RoiShapeCylinder_Click" ToolTip="Draw Cylinder ROI"/>
-                            <Button Content="Sphere" Width="70" Margin="2" Background="#FF9800" Foreground="White" Focusable="False"
+                            <Button Content="Sphere" Width="70" Margin="2" Background="#FF9800" Foreground="White"
                                     Click="RoiShapeSphere_Click" ToolTip="Draw Sphere ROI"/>
                         </StackPanel>
 
                         <!-- Action Buttons Panel - shown only when nodes are selected -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
                             <!-- ROI Filter Toggle shown only when ROI Filter node is selected -->
-                            <ToggleButton Focusable="False"
+                            <ToggleButton
                                           Width="38"
                                           Padding="8,6"
                                           Margin="0,0,5,0"
@@ -341,7 +341,7 @@
                             </ToggleButton>
 
                             <!-- Circle Detection Button shown only when Circle Detection node is selected -->
-                            <Button Content="Detect" Focusable="False"
+                            <Button Content="Detect"
                                     Width="60"
                                     Padding="8,6"
                                     Margin="0,0,5,0"
@@ -351,7 +351,7 @@
                                     ToolTip="Detect 2D circle in filtered point cloud"/>
 
                             <!-- Inspection Button shown only when Inspection node is selected -->
-                            <Button Content="Inspect" Focusable="False"
+                            <Button Content="Inspect"
                                     Width="60"
                                     Padding="8,6"
                                     Margin="0,0,5,0"
@@ -361,7 +361,7 @@
                                     ToolTip="Inspect detected circle against specifications"/>
 
                             <!-- Fit Camera Button -->
-                            <Button Content="Fit" Width="50" Padding="8,6" Focusable="False"
+                            <Button Content="Fit" Width="50" Padding="8,6"
                                     ToolTip="Fit camera to point cloud"
                                     Click="FitCameraButton_Click"
                                     Visibility="{Binding IsRoiDrawingMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>

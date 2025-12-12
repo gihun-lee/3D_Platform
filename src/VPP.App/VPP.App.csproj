@@ -8,6 +8,12 @@
     <NoWarn>NU1701</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Utilities\**" />
+    <EmbeddedResource Remove="Utilities\**" />
+    <None Remove="Utilities\**" />
+    <Page Remove="Utilities\**" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\VPP.Core\VPP.Core.csproj" />
     <ProjectReference Include="..\VPP.Plugins.PointCloud\VPP.Plugins.PointCloud.csproj" />
   </ItemGroup>
@@ -15,8 +21,5 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageReference Include="HelixToolkit.Wpf.SharpDX" Version="2.25.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Utilities\" />
   </ItemGroup>
 </Project>
