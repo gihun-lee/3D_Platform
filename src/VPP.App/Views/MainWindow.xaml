@@ -379,6 +379,8 @@
                                            MSAA="Maximum"
                                            BackgroundColor="#101014"
                                            Focusable="True"
+                                           CameraRotationMode="Turntable"
+                                           RotateAroundMouseDownPoint="False"
                                            PreviewKeyDown="Viewport3D_PreviewKeyDown"
                                            MouseLeftButtonDown="Viewport3D_MouseLeftButtonDown">
                             <helix:DirectionalLight3D Direction="-1,-1,-1" Color="#FFFFFF"/>

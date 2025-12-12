@@ -93,7 +93,81 @@ public partial class MainWindow : Window
                 // let our window-level MainWindow_KeyDown handle it
                 MainWindow_KeyDown(sender, e);
             }
+            return;
         }
+
+        // Relative 90-degree rotation
+        if (ViewModel?.Camera is Camera camera)
+        {
+            System.Windows.Media.Media3D.Vector3D axis = new(0, 0, 0);
+            double angle = 0;
+            bool rotate = false;
+
+            switch (e.Key)
+            {
+                case Key.A: // Y axis (-90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(0, 1, 0);
+                    angle = -90;
+                    rotate = true;
+                    break;
+                case Key.D: // Y axis (+90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(0, 1, 0);
+                    angle = 90;
+                    rotate = true;
+                    break;
+                case Key.W: // Z axis (+90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(0, 0, 1);
+                    angle = 90;
+                    rotate = true;
+                    break;
+                case Key.S: // Z axis (-90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(0, 0, 1);
+                    angle = -90;
+                    rotate = true;
+                    break;
+                case Key.Q: // X axis (+90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(1, 0, 0);
+                    angle = 90;
+                    rotate = true;
+                    break;
+                case Key.E: // X axis (-90)
+                    axis = new System.Windows.Media.Media3D.Vector3D(1, 0, 0);
+                    angle = -90;
+                    rotate = true;
+                    break;
+            }
+
+            if (rotate)
+            {
+                RotateCamera(camera, axis, angle);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private void RotateCamera(Camera camera, System.Windows.Media.Media3D.Vector3D axis, double angle)
+    {
+        var lookDir = camera.LookDirection;
+        var pos = camera.Position;
+        var target = pos + lookDir;
+
+        var rotation = new System.Windows.Media.Media3D.AxisAngleRotation3D(axis, angle);
+        var transform = new System.Windows.Media.Media3D.RotateTransform3D(rotation);
+
+        // Rotate position around target
+        var relativePos = pos - target;
+        var newRelativePos = transform.Transform(relativePos);
+        var newPos = target + newRelativePos;
+
+        // Rotate look direction
+        var newLookDir = transform.Transform(lookDir);
+
+        // Rotate up direction
+        var newUpDir = transform.Transform(camera.UpDirection);
+
+        camera.Position = newPos;
+        camera.LookDirection = newLookDir;
+        camera.UpDirection = newUpDir;
     }
 
     private void NodeCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
