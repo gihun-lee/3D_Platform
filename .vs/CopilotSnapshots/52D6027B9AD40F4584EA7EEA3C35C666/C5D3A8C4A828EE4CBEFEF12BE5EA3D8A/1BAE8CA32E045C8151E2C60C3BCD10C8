@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -489,28 +489,50 @@ public partial class MainViewModel : ObservableObject
 
         var circleDataList = new List<DetectedCircleData>();
 
-        // Always show all detected circles from all nodes
-        var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
-        foreach (var node in circleNodes)
-        {
-            AddCircleResultToList(circleDataList, node.Id);
-        }
+        // Strategy:
+        // 1. If a Circle Detection node is selected, show ONLY its result.
+        // 2. If an Inspection node is selected, show the result of the connected Circle Detection node.
+        // 3. If no specific node is selected (or a node that doesn't imply specific circle context), show ALL detected circles.
 
-        // Fallback for legacy/global result if list is still empty
-        if (circleDataList.Count == 0)
+        if (_selectedCircleDetectionNode != null)
         {
-             var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
-             var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
-             
-             if (detectedCloud != null || circleResult != null)
-             {
-                 circleDataList.Add(new DetectedCircleData
+            // Case 1: Specific Circle Detection Node Selected
+            AddCircleResultToList(circleDataList, _selectedCircleDetectionNode.Node.Id);
+        }
+        else if (_selectedInspectionNode != null)
+        {
+            // Case 2: Inspection Node Selected -> Find connected circle node
+            var circleNodeId = FindConnectedCircleNodeId(_selectedInspectionNode.Node.Id);
+            if (circleNodeId != null)
+            {
+                AddCircleResultToList(circleDataList, circleNodeId);
+            }
+        }
+        else
+        {
+            // Case 3: Show all (default view)
+            var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
+            foreach (var node in circleNodes)
+            {
+                AddCircleResultToList(circleDataList, node.Id);
+            }
+            
+            // Fallback for legacy global key if list is still empty
+            if (circleDataList.Count == 0)
+            {
+                 var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
+                 var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+                 
+                 if (detectedCloud != null || circleResult != null)
                  {
-                     NodeId = "Global",
-                     Cloud = detectedCloud,
-                     Result = circleResult
-                 });
-             }
+                     circleDataList.Add(new DetectedCircleData
+                     {
+                         NodeId = "Global",
+                         Cloud = detectedCloud,
+                         Result = circleResult
+                     });
+                 }
+            }
         }
 
         Scene.UpdateDetectedCircles(circleDataList);
@@ -521,7 +543,17 @@ public partial class MainViewModel : ObservableObject
             var count = circleDataList.Count(c => c.Result != null && c.Result.Radius > 0);
             if (count > 0)
             {
-                StatusMessage += $" | {count} Circle(s) Detected";
+                if (circleDataList.Count == 1)
+                {
+                    var r = circleDataList[0].Result;
+                    var pts = circleDataList[0].Cloud?.Points.Count ?? 0;
+                    if (r != null && r.Radius > 0)
+                        StatusMessage += $" | Circle: R={r.Radius:F2}mm, Inliers={pts:N0}";
+                }
+                else
+                {
+                    StatusMessage += $" | {count} Circle(s) Detected";
+                }
             }
         }
     }
@@ -540,6 +572,14 @@ public partial class MainViewModel : ObservableObject
                 Result = circleResult
             });
         }
+    }
+
+    private string? FindConnectedCircleNodeId(string inspectionNodeId)
+    {
+        return Graph.Connections
+            .Where(c => c.TargetNodeId == inspectionNodeId)
+            .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "Circle Detection"))
+            .FirstOrDefault()?.Id;
     }
 
     [RelayCommand]

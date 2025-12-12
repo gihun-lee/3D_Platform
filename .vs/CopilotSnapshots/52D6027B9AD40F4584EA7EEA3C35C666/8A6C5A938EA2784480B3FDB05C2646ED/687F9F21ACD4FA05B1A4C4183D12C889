@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -489,14 +489,26 @@ public partial class MainViewModel : ObservableObject
 
         var circleDataList = new List<DetectedCircleData>();
 
-        // Always show all detected circles from all nodes
+        // Find all Circle Detection nodes in the graph
         var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
+
         foreach (var node in circleNodes)
         {
-            AddCircleResultToList(circleDataList, node.Id);
+            var detectedCloud = _lastExecutionContext.Get<PointCloudData>($"DetectedCircleCloud_{node.Id}");
+            var circleResult = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{node.Id}");
+
+            if (detectedCloud != null || circleResult != null)
+            {
+                circleDataList.Add(new DetectedCircleData
+                {
+                    NodeId = node.Id,
+                    Cloud = detectedCloud,
+                    Result = circleResult
+                });
+            }
         }
 
-        // Fallback for legacy/global result if list is still empty
+        // Fallback for legacy/global result if no specific results found
         if (circleDataList.Count == 0)
         {
              var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
@@ -523,22 +535,6 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusMessage += $" | {count} Circle(s) Detected";
             }
-        }
-    }
-
-    private void AddCircleResultToList(List<DetectedCircleData> list, string nodeId)
-    {
-        var detectedCloud = _lastExecutionContext?.Get<PointCloudData>($"DetectedCircleCloud_{nodeId}");
-        var circleResult = _lastExecutionContext?.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{nodeId}");
-
-        if (detectedCloud != null || circleResult != null)
-        {
-            list.Add(new DetectedCircleData
-            {
-                NodeId = nodeId,
-                Cloud = detectedCloud,
-                Result = circleResult
-            });
         }
     }
 

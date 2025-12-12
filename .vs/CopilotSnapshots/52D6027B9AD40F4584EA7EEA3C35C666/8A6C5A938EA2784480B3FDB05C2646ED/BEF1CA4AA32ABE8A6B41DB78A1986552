@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using HelixToolkit.Wpf.SharpDX;
 using SharpDX;
 using System.Collections.ObjectModel;
@@ -555,11 +555,4 @@ public class RoiVisualization : ObservableObject
     public string NodeId { get; set; } = string.Empty;
     public LineGeometry3D? WireframeGeometry { get; set; }
     public HelixToolkit.Wpf.SharpDX.MeshGeometry3D? CenterPointGeometry { get; set; }
-}
-
-public class DetectedCircleData
-{
-    public string NodeId { get; set; } = string.Empty;
-    public PointCloudData? Cloud { get; set; }
-    public CircleDetectionResult? Result { get; set; }
 }

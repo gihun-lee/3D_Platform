@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using HelixToolkit.Wpf.SharpDX;
 using SharpDX;
 using System.Collections.ObjectModel;
@@ -45,9 +45,6 @@ public partial class SceneViewModel : ObservableObject
     [ObservableProperty] private double _detectedCirclePointSize = 4.0;
     [ObservableProperty] private LineGeometry3D? _detectedCircleOutlineGeometry;
     [ObservableProperty] private Color _detectedCircleOutlineColor = Colors.Red;
-    
-    // Multiple Detected Circles
-    [ObservableProperty] private ObservableElement3DCollection _detectedCircleModels = new();
 
     // Constants
     private const float RoiCenterSphereRadius = 0.1f;
@@ -64,53 +61,6 @@ public partial class SceneViewModel : ObservableObject
             NearPlaneDistance = 0.1,
             FarPlaneDistance = 100000
         };
-    }
-
-    public void UpdateDetectedCircles(IEnumerable<DetectedCircleData> circles)
-    {
-        DetectedCircleModels.Clear();
-        
-        // Clear legacy single properties
-        DetectedCircleGeometry = null;
-        DetectedCircleOutlineGeometry = null;
-
-        foreach (var circleData in circles)
-        {
-            // Create Point Cloud Geometry Model
-            if (circleData.Cloud != null && circleData.Cloud.Points.Count > 0)
-            {
-                try 
-                {
-                    var (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(circleData.Cloud, enableLod: false);
-                    var pointModel = new PointGeometryModel3D
-                    {
-                        Geometry = geometry,
-                        Color = Colors.Yellow, 
-                        Size = new System.Windows.Size(4, 4),
-                        FixedSize = true
-                    };
-                    DetectedCircleModels.Add(pointModel);
-                }
-                catch { /* ignore */ }
-            }
-
-            // Create Outline Geometry Model
-            if (circleData.Result != null && circleData.Result.Radius > 0)
-            {
-                var outlineGeometry = CreateCircleOutline(
-                    circleData.Result.Center,
-                    circleData.Result.Radius,
-                    circleData.Result.Normal);
-                
-                var lineModel = new LineGeometryModel3D
-                {
-                    Geometry = outlineGeometry,
-                    Color = Colors.Red,
-                    Thickness = 4
-                };
-                DetectedCircleModels.Add(lineModel);
-            }
-        }
     }
 
     public void UpdatePointCloud(List<PointCloudData> clouds, bool fitCamera)
@@ -555,11 +505,4 @@ public class RoiVisualization : ObservableObject
     public string NodeId { get; set; } = string.Empty;
     public LineGeometry3D? WireframeGeometry { get; set; }
     public HelixToolkit.Wpf.SharpDX.MeshGeometry3D? CenterPointGeometry { get; set; }
-}
-
-public class DetectedCircleData
-{
-    public string NodeId { get; set; } = string.Empty;
-    public PointCloudData? Cloud { get; set; }
-    public CircleDetectionResult? Result { get; set; }
 }

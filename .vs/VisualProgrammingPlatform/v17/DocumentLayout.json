@@ -77,7 +77,7 @@
               "RelativeDocumentMoniker": "src\\VPP.App\\ViewModels\\SceneViewModel.cs",
               "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\ViewModels\\SceneViewModel.cs",
               "RelativeToolTip": "src\\VPP.App\\ViewModels\\SceneViewModel.cs",
-              "ViewState": "AgIAANkBAAAAAAAAAAAYwPABAAA1AAAAAAAAAA==",
+              "ViewState": "AgIAACUAAAAAAAAAAAAkwDoAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-12T07:31:11.709Z",
               "EditorCaption": ""
@@ -92,8 +92,7 @@
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIFilterNode.cs",
               "ViewState": "AgIAAJkAAAAAAAAAAABQwJsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T07:02:47.169Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-04T07:02:47.169Z"
             },
             {
               "$type": "Document",
@@ -105,8 +104,7 @@
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\ROIDrawNode.cs",
               "ViewState": "AgIAAD0AAAAAAAAAAIBJwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T07:02:35.507Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-04T07:02:35.507Z"
             },
             {
               "$type": "Document",
@@ -141,8 +139,7 @@
               "RelativeToolTip": "src\\VPP.App\\Views\\MainWindow.xaml.cs",
               "ViewState": "AgIAACIDAAAAAAAAAABBwMUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-28T02:45:07.567Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-28T02:45:07.567Z"
             },
             {
               "$type": "Document",
@@ -152,7 +149,7 @@
               "RelativeDocumentMoniker": "src\\VPP.App\\ViewModels\\MainViewModel.cs",
               "ToolTip": "C:\\Users\\user\\Documents\\GitLab\\3D_Platform\\src\\VPP.App\\ViewModels\\MainViewModel.cs",
               "RelativeToolTip": "src\\VPP.App\\ViewModels\\MainViewModel.cs",
-              "ViewState": "AgIAABsBAAAAAAAAAABBwFEGAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAOsBAAAAAAAAAABRwGoGAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-28T02:44:52.95Z",
               "EditorCaption": ""
@@ -179,8 +176,7 @@
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\CircleDetectionNode.cs",
               "ViewState": "AgIAAKMAAAAAAAAAAABQwKUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-04T07:03:08.062Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-04T07:03:08.062Z"
             },
             {
               "$type": "Document",
@@ -204,8 +200,7 @@
               "RelativeToolTip": "src\\VPP.Plugins.PointCloud\\Nodes\\InspectionNode.cs",
               "ViewState": "AgIAAG0AAAAAAAAAAIBJwG8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-01T01:20:39.168Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-01T01:20:39.168Z"
             },
             {
               "$type": "Document",

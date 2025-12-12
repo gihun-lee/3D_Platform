@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -483,62 +483,37 @@ public partial class MainViewModel : ObservableObject
     {
         if (_lastExecutionContext == null) 
         {
-            Scene.UpdateDetectedCircles(Enumerable.Empty<DetectedCircleData>());
+            Scene.UpdateDetectedCircle(null, null);
             return;
         }
 
-        var circleDataList = new List<DetectedCircleData>();
-
-        // Always show all detected circles from all nodes
-        var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
-        foreach (var node in circleNodes)
+        // If a specific circle detection node is selected, show its result
+        if (_selectedCircleDetectionNode != null)
         {
-            AddCircleResultToList(circleDataList, node.Id);
-        }
+            var detectedCloud = _lastExecutionContext.Get<PointCloudData>($"DetectedCircleCloud_{_selectedCircleDetectionNode.Node.Id}");
+            var circleResult = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{_selectedCircleDetectionNode.Node.Id}");
+            
+            Scene.UpdateDetectedCircle(detectedCloud, circleResult);
 
-        // Fallback for legacy/global result if list is still empty
-        if (circleDataList.Count == 0)
-        {
-             var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
-             var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
-             
-             if (detectedCloud != null || circleResult != null)
-             {
-                 circleDataList.Add(new DetectedCircleData
-                 {
-                     NodeId = "Global",
-                     Cloud = detectedCloud,
-                     Result = circleResult
-                 });
-             }
-        }
-
-        Scene.UpdateDetectedCircles(circleDataList);
-
-        // Update status message
-        if (circleDataList.Count > 0)
-        {
-            var count = circleDataList.Count(c => c.Result != null && c.Result.Radius > 0);
-            if (count > 0)
+            if (detectedCloud != null && detectedCloud.Points.Count > 0)
             {
-                StatusMessage += $" | {count} Circle(s) Detected";
+                if (circleResult != null && circleResult.Radius > 0)
+                {
+                    StatusMessage += $" | Circle: R={circleResult.Radius:F2}mm, Inliers={detectedCloud.Points.Count:N0} (RED OUTLINE)";
+                }
+                else
+                {
+                    StatusMessage += $" | Detected Circle: {detectedCloud.Points.Count:N0} points shown in YELLOW";
+                }
             }
         }
-    }
-
-    private void AddCircleResultToList(List<DetectedCircleData> list, string nodeId)
-    {
-        var detectedCloud = _lastExecutionContext?.Get<PointCloudData>($"DetectedCircleCloud_{nodeId}");
-        var circleResult = _lastExecutionContext?.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{nodeId}");
-
-        if (detectedCloud != null || circleResult != null)
+        else
         {
-            list.Add(new DetectedCircleData
-            {
-                NodeId = nodeId,
-                Cloud = detectedCloud,
-                Result = circleResult
-            });
+            // Fallback to legacy global key if no node selected (or show nothing)
+            var detectedCloud = _lastExecutionContext.Get<PointCloudData>("DetectedCircleCloud");
+            var circleResult = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
+            
+            Scene.UpdateDetectedCircle(detectedCloud, circleResult);
         }
     }
 

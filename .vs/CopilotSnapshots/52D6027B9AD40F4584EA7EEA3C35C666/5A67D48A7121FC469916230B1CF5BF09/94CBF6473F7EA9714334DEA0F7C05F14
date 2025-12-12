@@ -1,4 +1,4 @@
-<Window x:Class="VPP.App.Views.MainWindow"
+﻿<Window x:Class="VPP.App.Views.MainWindow"
         x:Name="RootWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -403,8 +403,6 @@
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.DetectedCircleOutlineGeometry}"
                                                       Thickness="4"
                                                       Color="Red"/>
-                            <!-- Multiple Detected Circles -->
-                            <helix:GroupModel3D ItemsSource="{Binding Scene.DetectedCircleModels}"/>
                             <!-- Multiple ROI Models -->
                             <helix:GroupModel3D ItemsSource="{Binding Scene.RoiModels}"/>
                             <!-- Legacy Single ROI Wireframe (fallback for compatibility) -->
