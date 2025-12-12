@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9e45ae8d582d5d290d61d3e300127a1175c1446e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7ba6e4ac209d9a377a95ec008dd930b07596c99c")]
 [assembly: System.Reflection.AssemblyProductAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

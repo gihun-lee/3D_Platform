@@ -174,13 +174,35 @@ public partial class MainViewModel : ObservableObject
 
         if (dialog.ShowDialog() == true)
         {
-            // Find import node and set file path parameter
-            var importNode = Graph.Nodes.FirstOrDefault(n => n.Name == "Import Point Cloud");
-            if (importNode != null)
+            INode? targetNode = null;
+
+            // Prioritize selected node if it is an import node
+            if (SelectedNode != null && SelectedNode.Name == "Import Point Cloud")
             {
-                var pathParam = importNode.Parameters.FirstOrDefault(p => p.Name == "FilePath");
+                targetNode = SelectedNode.Node;
+            }
+            else
+            {
+                // Fallback: find import nodes
+                var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
+                
+                if (importNodes.Count == 1)
+                {
+                    targetNode = importNodes[0];
+                }
+                else if (importNodes.Count > 1)
+                {
+                    StatusMessage = "Multiple Import nodes found. Please select the one you want to load into.";
+                    return;
+                }
+            }
+
+            if (targetNode != null)
+            {
+                var pathParam = targetNode.Parameters.FirstOrDefault(p => p.Name == "FilePath");
                 if (pathParam != null)
                     pathParam.Value = dialog.FileName;
+                
                 StatusMessage = $"Loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
 
                 // Auto-execute to display the point cloud
