@@ -412,7 +412,7 @@ public partial class SceneViewModel : ObservableObject
         }
         else if (shape == ROIShape.Cylinder)
         {
-            int segments = 32;
+            int segments = 24;
             for (int i = 0; i < segments; i++)
             {
                 float angle = i * 2 * MathF.PI / segments;
@@ -440,8 +440,8 @@ public partial class SceneViewModel : ObservableObject
         }
         else if (shape == ROIShape.Sphere)
         {
-            int segments = 32;
-            int rings = 16;
+            int segments = 24;
+            int rings = 12;
 
             for (int ring = 0; ring <= rings; ring++)
             {
@@ -457,20 +457,23 @@ public partial class SceneViewModel : ObservableObject
                 }
             }
 
-            for (int ring = 0; ring < rings; ring++)
+            for (int ring = 0; ring <= rings; ring++)
             {
                 for (int seg = 0; seg < segments; seg++)
                 {
-                    int current = ring * (segments + 1) + seg;
-                    int next = current + (segments + 1);
+                    int current = ring * segments + seg;
+                    int nextSeg = (seg + 1) % segments;
 
+                    // Horizontal line (Latitude)
                     indices.Add(current);
-                    indices.Add(next);
-                    indices.Add(current + 1);
+                    indices.Add(ring * segments + nextSeg);
 
-                    indices.Add(current + 1);
-                    indices.Add(next);
-                    indices.Add(next + 1);
+                    // Vertical line (Longitude)
+                    if (ring < rings)
+                    {
+                        indices.Add(current);
+                        indices.Add((ring + 1) * segments + seg);
+                    }
                 }
             }
         }

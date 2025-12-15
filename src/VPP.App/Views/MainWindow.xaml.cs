@@ -281,9 +281,31 @@ public partial class MainWindow : Window
     {
         if (listBox?.SelectedItem is string nodeType && ViewModel != null)
         {
-            // Use context menu position directly (no scale transform on canvas anymore)
-            ViewModel.AddNodeAtPosition(nodeType, _contextMenuPosition.X, _contextMenuPosition.Y);
+            // Capture position and viewmodel
+            var x = _contextMenuPosition.X;
+            var y = _contextMenuPosition.Y;
+            var vm = ViewModel;
+
+            // Close menu first
             AddNodeContextMenu.IsOpen = false;
+            
+            // Clear selection
+            listBox.SelectedItem = null;
+
+            // Delay node creation to prevent click-through (MouseUp event triggering parameter edit on new node)
+            Dispatcher.InvokeAsync(async () => 
+            {
+                // Wait for mouse release if it's pressed (SelectionChanged fires on MouseDown)
+                while (Mouse.LeftButton == MouseButtonState.Pressed)
+                {
+                    await System.Threading.Tasks.Task.Delay(10);
+                }
+                
+                // Small buffer to ensure the MouseUp event is fully processed by the system
+                await System.Threading.Tasks.Task.Delay(50);
+
+                vm.AddNodeAtPosition(nodeType, x, y);
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
     }
 
