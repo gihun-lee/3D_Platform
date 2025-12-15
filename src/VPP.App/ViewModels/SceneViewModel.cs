@@ -58,7 +58,7 @@ public partial class SceneViewModel : ObservableObject
         _camera = new HelixToolkit.Wpf.SharpDX.PerspectiveCamera
         {
             Position = new Point3D(0, 0, 300),
-            LookDirection = new Vector3D(0, 0, -1),
+            LookDirection = new Vector3D(0, 0, -300),
             UpDirection = new Vector3D(0, 1, 0),
             FieldOfView = 45,
             NearPlaneDistance = 0.1,

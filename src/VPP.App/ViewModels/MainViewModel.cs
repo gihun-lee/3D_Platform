@@ -491,11 +491,33 @@ public partial class MainViewModel : ObservableObject
 
         var circleDataList = new List<DetectedCircleData>();
 
-        // Always show all detected circles from all nodes
-        var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
-        foreach (var node in circleNodes)
+        // Filter visible circles based on selection
+        if (_selectedCircleDetectionNode != null)
         {
-            AddCircleResultToList(circleDataList, node.Id);
+            // Show only the selected circle detection node's result
+            AddCircleResultToList(circleDataList, _selectedCircleDetectionNode.Node.Id);
+        }
+        else if (_selectedInspectionNode != null)
+        {
+            // Show the circle detection result connected to the selected inspection node
+            var circleNode = Graph.Connections
+                .Where(c => c.TargetNodeId == _selectedInspectionNode.Node.Id)
+                .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "Circle Detection"))
+                .FirstOrDefault();
+            
+            if (circleNode != null)
+            {
+                AddCircleResultToList(circleDataList, circleNode.Id);
+            }
+        }
+        else
+        {
+            // Show all detected circles if no specific node is selected (Overview)
+            var circleNodes = Graph.Nodes.Where(n => n.Name == "Circle Detection").ToList();
+            foreach (var node in circleNodes)
+            {
+                AddCircleResultToList(circleDataList, node.Id);
+            }
         }
 
         // Fallback for legacy/global result if list is still empty
@@ -521,7 +543,7 @@ public partial class MainViewModel : ObservableObject
         if (circleDataList.Count > 0)
         {
             var count = circleDataList.Count(c => c.Result != null && c.Result.Radius > 0);
-            if (count > 0)
+            if (count > 0 && !StatusMessage.Contains("Circle(s) Detected"))
             {
                 StatusMessage += $" | {count} Circle(s) Detected";
             }
@@ -1187,6 +1209,7 @@ public partial class MainViewModel : ObservableObject
 
         // Update visualization to reflect filter state
         UpdateVisualization();
+        UpdateDetectedCircleVisualization();
     }
 
     private NodeViewModel? FindConnectedRoiDrawNode(NodeViewModel nodeVm)
