@@ -455,15 +455,8 @@ public partial class SceneViewModel : ObservableObject
                 majorIndices.Add(segments + i);
                 majorIndices.Add(segments + next);
 
-                // Verticals
-                // Major: 4 lines (0, 90, 180, 270 degrees)
-                if (i % (segments / 4) == 0)
-                {
-                    majorIndices.Add(i);
-                    majorIndices.Add(segments + i);
-                }
-                // Minor: Every 8th segment (approx 45 degrees), excluding majors
-                else if (i % (segments / 8) == 0)
+                // Verticals - All Minor
+                if (i % (segments / 8) == 0)
                 {
                     minorIndices.Add(i);
                     minorIndices.Add(segments + i);
@@ -511,15 +504,8 @@ public partial class SceneViewModel : ObservableObject
                         minorIndices.Add(ring * segments + nextSeg);
                     }
 
-                    // Vertical lines (Longitudes)
-                    // Major: 0, 90, 180, 270 degrees
-                    if (seg % (segments / 4) == 0)
-                    {
-                        majorIndices.Add(current);
-                        majorIndices.Add(nextRing);
-                    }
-                    // Minor: Every 8th segment
-                    else if (seg % (segments / 8) == 0)
+                    // Vertical lines (Longitudes) - All Minor
+                    if (seg % (segments / 8) == 0)
                     {
                         minorIndices.Add(current);
                         minorIndices.Add(nextRing);
