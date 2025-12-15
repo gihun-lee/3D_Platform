@@ -642,61 +642,74 @@ public partial class MainViewModel : ObservableObject
         int totalOriginalPoints = 0;
         var clouds = new List<PointCloudData>();
 
-        // All Import and Transform nodes
-        var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
-        var transformNodes = Graph.Nodes.Where(n => n.Name == "Rigid Transform").ToList();
-
-        // Determine transform chain leaves (transforms that do not feed into another transform)
-        var transformIdSet = new HashSet<string>(transformNodes.Select(t => t.Id));
-        var nonLeafTransformIds = new HashSet<string>(
-            Graph.Connections
-                 .Where(c => transformIdSet.Contains(c.SourceNodeId) && transformIdSet.Contains(c.TargetNodeId))
-                 .Select(c => c.SourceNodeId)
-        );
-        var leafTransforms = transformNodes.Where(t => !nonLeafTransformIds.Contains(t.Id)).ToList();
-
-        // Track which imports have been successfully transformed
-        var successfullyTransformedImportIds = new HashSet<string>();
-
-        // Add leaf transformed clouds (and track their source imports)
-        foreach (var t in leafTransforms)
+        // If an Import Point Cloud node is selected, show only its data
+        if (SelectedNode != null && SelectedNode.Name == "Import Point Cloud")
         {
-            var transformedCloud = _lastExecutionContext.Get<PointCloudData>($"TransformedCloud_{t.Id}");
-            if (transformedCloud != null && transformedCloud.Points.Count > 0)
+            var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{SelectedNode.Node.Id}");
+            if (nodeCloud != null && nodeCloud.Points.Count > 0)
             {
-                clouds.Add(transformedCloud);
-                totalOriginalPoints += transformedCloud.Points.Count;
-
-                // Mark the upstream imports as successfully transformed
-                foreach (var upId in GetUpstreamImportIds(t.Id))
-                    successfullyTransformedImportIds.Add(upId);
+                clouds.Add(nodeCloud);
+                totalOriginalPoints = nodeCloud.Points.Count;
             }
         }
-
-        // Add import clouds that either:
-        // 1. Have no transform downstream, OR
-        // 2. Have a transform but it failed (no TransformedCloud exists)
-        foreach (var importNode in importNodes)
+        else
         {
-            if (!successfullyTransformedImportIds.Contains(importNode.Id))
+            // All Import and Transform nodes
+            var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
+            var transformNodes = Graph.Nodes.Where(n => n.Name == "Rigid Transform").ToList();
+
+            // Determine transform chain leaves (transforms that do not feed into another transform)
+            var transformIdSet = new HashSet<string>(transformNodes.Select(t => t.Id));
+            var nonLeafTransformIds = new HashSet<string>(
+                Graph.Connections
+                     .Where(c => transformIdSet.Contains(c.SourceNodeId) && transformIdSet.Contains(c.TargetNodeId))
+                     .Select(c => c.SourceNodeId)
+            );
+            var leafTransforms = transformNodes.Where(t => !nonLeafTransformIds.Contains(t.Id)).ToList();
+
+            // Track which imports have been successfully transformed
+            var successfullyTransformedImportIds = new HashSet<string>();
+
+            // Add leaf transformed clouds (and track their source imports)
+            foreach (var t in leafTransforms)
             {
-                var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{importNode.Id}");
-                if (nodeCloud != null && nodeCloud.Points.Count > 0)
+                var transformedCloud = _lastExecutionContext.Get<PointCloudData>($"TransformedCloud_{t.Id}");
+                if (transformedCloud != null && transformedCloud.Points.Count > 0)
                 {
-                    clouds.Add(nodeCloud);
-                    totalOriginalPoints += nodeCloud.Points.Count;
+                    clouds.Add(transformedCloud);
+                    totalOriginalPoints += transformedCloud.Points.Count;
+
+                    // Mark the upstream imports as successfully transformed
+                    foreach (var upId in GetUpstreamImportIds(t.Id))
+                        successfullyTransformedImportIds.Add(upId);
                 }
             }
-        }
 
-        // Fallback: only raw global cloud
-        if (clouds.Count == 0)
-        {
-            var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
-            if (globalCloud != null && globalCloud.Points.Count > 0)
+            // Add import clouds that either:
+            // 1. Have no transform downstream, OR
+            // 2. Have a transform but it failed (no TransformedCloud exists)
+            foreach (var importNode in importNodes)
             {
-                clouds.Add(globalCloud);
-                totalOriginalPoints = globalCloud.Points.Count;
+                if (!successfullyTransformedImportIds.Contains(importNode.Id))
+                {
+                    var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{importNode.Id}");
+                    if (nodeCloud != null && nodeCloud.Points.Count > 0)
+                    {
+                        clouds.Add(nodeCloud);
+                        totalOriginalPoints += nodeCloud.Points.Count;
+                    }
+                }
+            }
+
+            // Fallback: only raw global cloud
+            if (clouds.Count == 0)
+            {
+                var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+                if (globalCloud != null && globalCloud.Points.Count > 0)
+                {
+                    clouds.Add(globalCloud);
+                    totalOriginalPoints = globalCloud.Points.Count;
+                }
             }
         }
 
@@ -1042,8 +1055,17 @@ public partial class MainViewModel : ObservableObject
             {
                 IsRoiDrawingMode = false;
                 SelectedRoiNode = null;
-                // Show all ROIs when not in drawing mode
-                UpdateAllRoiVisualizations();
+
+                if (nodeVm.Name == "Import Point Cloud")
+                {
+                    // Hide ROIs when viewing raw import data
+                    Scene.UpdateRoiVisualizations(Enumerable.Empty<RoiVisualizationData>());
+                }
+                else
+                {
+                    // Show all ROIs when not in drawing mode
+                    UpdateAllRoiVisualizations();
+                }
             }
 
             // If ROI Filter node selected, show ON/OFF toggle
@@ -1129,7 +1151,7 @@ public partial class MainViewModel : ObservableObject
             // IMPORTANT: Show all ROIs when nothing is selected
             UpdateAllRoiVisualizations();
             
-            StatusMessage = "Ready";
+            StatusMessage = "Ready - Showing all data";
         }
 
         // Update visualization to reflect filter state

@@ -1420,6 +1420,7 @@ public partial class MainWindow : Window
             if (ViewModel != null)
             {
                 bool ctrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                bool anySelected = false;
 
                 if (!ctrlPressed)
                 {
@@ -1436,7 +1437,13 @@ public partial class MainWindow : Window
                     if (selectionRect.IntersectsWith(nodeRect))
                     {
                         n.IsSelected = true;
+                        anySelected = true;
                     }
+                }
+
+                if (!anySelected && !ctrlPressed)
+                {
+                    ViewModel.SelectNode(null);
                 }
             }
 
