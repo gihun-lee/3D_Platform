@@ -340,23 +340,33 @@ public partial class SceneViewModel : ObservableObject
 
         foreach (var roiData in rois)
         {
-            var (wireframe, centerPoint) = CreateRoiGeometry(roiData.Center, roiData.Size, roiData.Radius, roiData.Shape);
+            var (major, minor, centerPoint) = CreateRoiGeometry(roiData.Center, roiData.Size, roiData.Radius, roiData.Shape);
             
             var roiViz = new RoiVisualization
             {
                 NodeId = roiData.NodeId,
-                WireframeGeometry = wireframe,
+                WireframeGeometry = major, // Bind major to legacy property
                 CenterPointGeometry = centerPoint
             };
             RoiVisualizations.Add(roiViz);
 
-            if (wireframe != null)
+            if (major != null)
             {
                 RoiModels.Add(new LineGeometryModel3D
                 {
-                    Geometry = wireframe,
+                    Geometry = major,
                     Thickness = 3,
                     Color = Colors.Yellow
+                });
+            }
+
+            if (minor != null)
+            {
+                RoiModels.Add(new LineGeometryModel3D
+                {
+                    Geometry = minor,
+                    Thickness = 1.0,
+                    Color = Color.FromArgb(100, 255, 255, 0) // Semi-transparent yellow for thin lines
                 });
             }
 
@@ -371,19 +381,20 @@ public partial class SceneViewModel : ObservableObject
             }
 
             // For legacy binding support (shows last one)
-            RoiWireframeGeometry = wireframe;
+            RoiWireframeGeometry = major;
             RoiCenterPointGeometry = centerPoint;
         }
     }
 
-    private (LineGeometry3D wireframe, HelixToolkit.Wpf.SharpDX.MeshGeometry3D centerPoint) CreateRoiGeometry(
+    private (LineGeometry3D? major, LineGeometry3D? minor, HelixToolkit.Wpf.SharpDX.MeshGeometry3D centerPoint) CreateRoiGeometry(
         System.Numerics.Vector3 center, 
         System.Numerics.Vector3 size, 
         float radius, 
         ROIShape shape)
     {
         var positions = new Vector3Collection();
-        var indices = new IntCollection();
+        var majorIndices = new IntCollection();
+        var minorIndices = new IntCollection();
 
         if (shape == ROIShape.Box)
         {
@@ -408,40 +419,61 @@ public partial class SceneViewModel : ObservableObject
 
             int[] edgeIndices = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
             foreach (var idx in edgeIndices)
-                indices.Add(idx);
+                majorIndices.Add(idx);
         }
         else if (shape == ROIShape.Cylinder)
         {
-            int segments = 24;
+            int segments = 64; // High resolution for smooth circles
+            
+            // Top circle (Y+)
             for (int i = 0; i < segments; i++)
             {
                 float angle = i * 2 * MathF.PI / segments;
                 float x = center.X + radius * MathF.Cos(angle);
                 float z = center.Z + radius * MathF.Sin(angle);
-
-                positions.Add(new Vector3(x, center.Y - size.Y / 2, z));
                 positions.Add(new Vector3(x, center.Y + size.Y / 2, z));
             }
+            // Bottom circle (Y-)
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * 2 * MathF.PI / segments;
+                float x = center.X + radius * MathF.Cos(angle);
+                float z = center.Z + radius * MathF.Sin(angle);
+                positions.Add(new Vector3(x, center.Y - size.Y / 2, z));
+            }
 
+            // Indices
             for (int i = 0; i < segments; i++)
             {
                 int next = (i + 1) % segments;
-                indices.Add(i * 2);
-                indices.Add(next * 2);
-                indices.Add(i * 2 + 1);
-                indices.Add(next * 2 + 1);
-            }
+                
+                // Top Circle (Major)
+                majorIndices.Add(i);
+                majorIndices.Add(next);
 
-            for (int i = 0; i < segments; i += segments / 8)
-            {
-                indices.Add(i * 2);
-                indices.Add(i * 2 + 1);
+                // Bottom Circle (Major)
+                majorIndices.Add(segments + i);
+                majorIndices.Add(segments + next);
+
+                // Verticals
+                // Major: 4 lines (0, 90, 180, 270 degrees)
+                if (i % (segments / 4) == 0)
+                {
+                    majorIndices.Add(i);
+                    majorIndices.Add(segments + i);
+                }
+                // Minor: Every 8th segment (approx 45 degrees), excluding majors
+                else if (i % (segments / 8) == 0)
+                {
+                    minorIndices.Add(i);
+                    minorIndices.Add(segments + i);
+                }
             }
         }
         else if (shape == ROIShape.Sphere)
         {
-            int segments = 24;
-            int rings = 12;
+            int segments = 64;
+            int rings = 32;
 
             for (int ring = 0; ring <= rings; ring++)
             {
@@ -457,36 +489,60 @@ public partial class SceneViewModel : ObservableObject
                 }
             }
 
-            for (int ring = 0; ring <= rings; ring++)
+            for (int ring = 0; ring < rings; ring++)
             {
                 for (int seg = 0; seg < segments; seg++)
                 {
                     int current = ring * segments + seg;
                     int nextSeg = (seg + 1) % segments;
+                    int nextRing = (ring + 1) * segments + seg;
 
-                    // Horizontal line (Latitude)
-                    indices.Add(current);
-                    indices.Add(ring * segments + nextSeg);
-
-                    // Vertical line (Longitude)
-                    if (ring < rings)
+                    // Horizontal lines (Latitudes)
+                    // Major: Equator
+                    if (ring == rings / 2)
                     {
-                        indices.Add(current);
-                        indices.Add((ring + 1) * segments + seg);
+                        majorIndices.Add(current);
+                        majorIndices.Add(ring * segments + nextSeg);
+                    }
+                    // Minor: Every 4th ring
+                    else if (ring % 4 == 0)
+                    {
+                        minorIndices.Add(current);
+                        minorIndices.Add(ring * segments + nextSeg);
+                    }
+
+                    // Vertical lines (Longitudes)
+                    // Major: 0, 90, 180, 270 degrees
+                    if (seg % (segments / 4) == 0)
+                    {
+                        majorIndices.Add(current);
+                        majorIndices.Add(nextRing);
+                    }
+                    // Minor: Every 8th segment
+                    else if (seg % (segments / 8) == 0)
+                    {
+                        minorIndices.Add(current);
+                        minorIndices.Add(nextRing);
                     }
                 }
             }
         }
 
-        var wireframe = new LineGeometry3D
+        var majorGeometry = new LineGeometry3D
         {
             Positions = positions,
-            Indices = indices
+            Indices = majorIndices
         };
+
+        var minorGeometry = minorIndices.Count > 0 ? new LineGeometry3D
+        {
+            Positions = positions,
+            Indices = minorIndices
+        } : null;
 
         var centerPoint = CreateSphereGeometry(center, RoiCenterSphereRadius, 6, 3);
 
-        return (wireframe, centerPoint);
+        return (majorGeometry, minorGeometry, centerPoint);
     }
 
     private HelixToolkit.Wpf.SharpDX.MeshGeometry3D CreateSphereGeometry(System.Numerics.Vector3 center, float radius, int segments, int rings)
