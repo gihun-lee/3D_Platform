@@ -37,10 +37,6 @@
         <!-- Toolbar -->
         <Border Grid.Row="0" Background="#2D2D2D" Padding="10">
             <StackPanel Orientation="Horizontal">
-                <Button Content="Create Workflow" Command="{Binding CreateDefaultWorkflowCommand}" Focusable="False"
-                        Background="#2196F3" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Execute" Command="{Binding ExecuteGraphCommand}" Focusable="False"
-                        Background="#FF9800" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
                 <Button Content="Save" Command="{Binding SaveWorkflowCommand}" Focusable="False"
                         Background="#4CAF50" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
                 <Button Content="Load" Command="{Binding LoadWorkflowCommand}" Focusable="False"

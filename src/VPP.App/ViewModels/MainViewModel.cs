@@ -129,8 +129,7 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = $"Added node: {node.Name}";
     }
 
-    [RelayCommand]
-    private async Task ExecuteGraph()
+    public async Task ExecuteGraph()
     {
         if (IsExecuting) return;
         IsExecuting = true;
@@ -1380,7 +1379,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = $"Workflow loaded: {System.IO.Path.GetFileName(dlg.FileName)} ({Nodes.Count} nodes, {Connections.Count} connections)";
             
             // Auto-execute to display all point clouds
-            _ = ExecuteGraphCommand.ExecuteAsync(null);
+            _ = ExecuteGraph();
         }
         catch (Exception ex)
         {

@@ -313,7 +313,7 @@ public partial class MainWindow : Window
                         if (ViewModel != null)
                         {
                             ViewModel.StatusMessage = $"Loading: {System.IO.Path.GetFileName(dialog.FileName)}";
-                            _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+                            _ = ViewModel.ExecuteGraph();
                         }
                     }
                 }
@@ -620,7 +620,7 @@ public partial class MainWindow : Window
                 {
                     param.Value = dialog.FileName;
                     ViewModel!.StatusMessage = $"Loaded: {System.IO.Path.GetFileName(dialog.FileName)}";
-                    _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+                    _ = ViewModel.ExecuteGraph();
                 }
                 return;
             }
@@ -636,7 +636,7 @@ public partial class MainWindow : Window
                     param.Value = editor.ResultMatrix;
                     ViewModel!.StatusMessage = "Matrix updated";
                     // Optionally auto-execute graph to apply transform
-                    _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+                    _ = ViewModel.ExecuteGraph();
                 }
                 return;
             }
@@ -656,7 +656,7 @@ public partial class MainWindow : Window
         {
             param.Value = !(bool)param.Value;
             ViewModel!.StatusMessage = $"{param.Name} = {param.Value}";
-            _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+            _ = ViewModel.ExecuteGraph();
             return;
         }
 
@@ -789,7 +789,7 @@ public partial class MainWindow : Window
                         param.Value = double.Parse(textBox.Text);
 
                     ViewModel!.StatusMessage = $"{param.Name} = {param.Value}";
-                    _ = ViewModel.ExecuteGraphCommand.ExecuteAsync(null);
+                    _ = ViewModel.ExecuteGraph();
                 }
                 catch
                 {
