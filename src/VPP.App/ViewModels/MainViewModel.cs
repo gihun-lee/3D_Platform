@@ -69,6 +69,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isInspectButtonVisible;
     private NodeViewModel? _selectedInspectionNode;
     
+    [ObservableProperty] private bool _isResultPanelVisible;
+
     // Track if we should force filter visualization for downstream nodes
     private bool _forceFilterVisualization = false;
 
@@ -475,27 +477,6 @@ public partial class MainViewModel : ObservableObject
             {
                 InspectionPass = result.Pass;
                 InspectionResult = result.Message;
-
-                // Update status message with detailed info
-                if (result.Measurements.ContainsKey("Radius"))
-                {
-                    DetectedRadius = result.Measurements["Radius"];
-                }
-            }
-        }
-        else
-        {
-            var result = _lastExecutionContext.Get<InspectionResult>("InspectionResult");
-            if (result != null)
-            {
-                InspectionPass = result.Pass;
-                InspectionResult = result.Message;
-
-                // Update status message with detailed info
-                if (result.Measurements.ContainsKey("Radius"))
-                {
-                    DetectedRadius = result.Measurements["Radius"];
-                }
             }
         }
     }
@@ -882,6 +863,12 @@ public partial class MainViewModel : ObservableObject
     {
         if (_lastExecutionContext == null) return;
 
+        // Reset values to ensure they are hidden when not selected
+        InspectionPass = false;
+        InspectionResult = "";
+        DetectedRadius = 0;
+        DetectedCenter = new Media3D.Point3D(0, 0, 0);
+
         // If inspection node selected, show its specific result
         if (_selectedInspectionNode != null)
         {
@@ -889,15 +876,30 @@ public partial class MainViewModel : ObservableObject
             {
                 InspectionPass = inspectionResult.Pass;
                 InspectionResult = inspectionResult.Message;
+
+                if (inspectionResult.Measurements != null && inspectionResult.Measurements.TryGetValue("Radius", out var radius))
+                {
+                    DetectedRadius = radius;
+                }
             }
-        }
-        else
-        {
-            // Fallback to legacy global key
-            if (_lastExecutionContext.TryGet<InspectionResult>("InspectionResult", out var inspectionResult))
+
+            // If Radius is still 0, try to get it from the connected Circle Detection node
+            if (DetectedRadius == 0)
             {
-                InspectionPass = inspectionResult.Pass;
-                InspectionResult = inspectionResult.Message;
+                var sourceNodeId = Graph.Connections
+                    .Where(c => c.TargetNodeId == _selectedInspectionNode.Node.Id)
+                    .Select(c => c.SourceNodeId)
+                    .FirstOrDefault();
+                
+                if (sourceNodeId != null)
+                {
+                    var circleResult = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{sourceNodeId}");
+                    if (circleResult != null)
+                    {
+                        DetectedRadius = circleResult.Radius;
+                        DetectedCenter = new Media3D.Point3D(circleResult.Center.X, circleResult.Center.Y, circleResult.Center.Z);
+                    }
+                }
             }
         }
 
@@ -905,15 +907,6 @@ public partial class MainViewModel : ObservableObject
         if (_selectedCircleDetectionNode != null)
         {
             var circle = _lastExecutionContext.Get<CircleDetectionResult>($"{VPP.Core.Models.ExecutionContext.CircleResultKey}_{_selectedCircleDetectionNode.Node.Id}");
-            if (circle != null)
-            {
-                DetectedRadius = circle.Radius;
-                DetectedCenter = new Media3D.Point3D(circle.Center.X, circle.Center.Y, circle.Center.Z);
-            }
-        }
-        else
-        {
-            var circle = _lastExecutionContext.Get<CircleDetectionResult>(VPP.Core.Models.ExecutionContext.CircleResultKey);
             if (circle != null)
             {
                 DetectedRadius = circle.Radius;
@@ -1139,6 +1132,41 @@ public partial class MainViewModel : ObservableObject
                 IsInspectButtonVisible = true;
                 _selectedInspectionNode = nodeVm;
                 StatusMessage = "Inspection Mode: Click 'Inspect' to validate detected circle against specifications";
+
+                // Auto-enable filter visualization if connected to Circle Detection -> ROI Filter
+                var circleNode = Graph.Connections
+                    .Where(c => c.TargetNodeId == nodeVm.Node.Id)
+                    .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "Circle Detection"))
+                    .FirstOrDefault();
+
+                if (circleNode != null)
+                {
+                    var roiFilterNode = Graph.Connections
+                        .Where(c => c.TargetNodeId == circleNode.Id)
+                        .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "ROI Filter"))
+                        .FirstOrDefault();
+
+                    if (roiFilterNode != null)
+                    {
+                        var roiFilterNodeVm = Nodes.FirstOrDefault(n => n.Node.Id == roiFilterNode.Id);
+                        if (roiFilterNodeVm != null)
+                        {
+                            _selectedRoiFilterNode = roiFilterNodeVm;
+                            IsRoiFilterOn = true;
+                            _forceFilterVisualization = true;
+
+                            var connectedDrawNode = FindConnectedRoiDrawNode(roiFilterNodeVm);
+                            if (connectedDrawNode != null)
+                            {
+                                UpdateSingleRoiVisualization(connectedDrawNode);
+                            }
+                            else
+                            {
+                                UpdateAllRoiVisualizations();
+                            }
+                        }
+                    }
+                }
             }
         }
         else
@@ -1153,6 +1181,9 @@ public partial class MainViewModel : ObservableObject
             
             StatusMessage = "Ready - Showing all data";
         }
+
+        // Update result panel visibility
+        IsResultPanelVisible = IsCircleDetectButtonVisible || IsInspectButtonVisible;
 
         // Update visualization to reflect filter state
         UpdateVisualization();

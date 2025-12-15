@@ -446,7 +446,8 @@
                     </Border>
 
                     <Border Grid.Row="2" Padding="10"
-                            Background="{Binding InspectionPass, Converter={StaticResource PassFailConverter}}">
+                            Background="{Binding InspectionPass, Converter={StaticResource PassFailConverter}}"
+                            Visibility="{Binding IsResultPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="{Binding InspectionResult}"
                                        FontSize="14" FontWeight="Bold"
