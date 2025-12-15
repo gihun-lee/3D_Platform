@@ -7,9 +7,9 @@
         xmlns:vm="clr-namespace:VPP.App.ViewModels"
         xmlns:helix="http://helix-toolkit.org/wpf/SharpDX"
         mc:Ignorable="d"
-        Title="Visual Programming Platform - Point Cloud Inspection"
-        Height="800" Width="1400"
-        Background="#1E1E1E"
+        Title="Visual Programming Platform - 3D Point Cloud Inspection System"
+        Height="900" Width="1600"
+        Background="#0F0F0F"
         WindowState="Maximized">
 
     <Window.Resources>
@@ -20,6 +20,58 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="MinWidth" Value="150"/>
+        </Style>
+
+        <!-- Tab Button Style -->
+        <Style x:Key="TabButtonStyle" TargetType="RadioButton">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Border"
+                                Background="Transparent"
+                                BorderThickness="0,0,3,0"
+                                Padding="15,12"
+                                Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Icon"
+                                          Text="{TemplateBinding Tag}"
+                                          FontSize="20"
+                                          Margin="0,0,10,0"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock x:Name="Text"
+                                          Text="{TemplateBinding Content}"
+                                          FontSize="14"
+                                          Foreground="#BBB"
+                                          VerticalAlignment="Center"
+                                          FontWeight="Medium"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#1A1A1A"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#2196F3"/>
+                                <Setter TargetName="Text" Property="Foreground" Value="White"/>
+                                <Setter TargetName="Text" Property="FontWeight" Value="Bold"/>
+                                <Setter TargetName="Icon" Property="Opacity" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#151515"/>
+                                <Setter TargetName="Text" Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Card Style for content sections -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="5"/>
         </Style>
     </Window.Resources>
 
@@ -34,235 +86,656 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar -->
-        <Border Grid.Row="0" Background="#2D2D2D" Padding="10">
-            <StackPanel Orientation="Horizontal">
-                <Button Content="Save" Command="{Binding SaveWorkflowCommand}" Focusable="False"
-                        Background="#4CAF50" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Load" Command="{Binding LoadWorkflowCommand}" Focusable="False"
-                        Background="#00BCD4" Foreground="White" Padding="12,8"/>
-            </StackPanel>
+        <!-- Top Toolbar -->
+        <Border Grid.Row="0" Background="#1A1A1A" BorderThickness="0,0,0,1" BorderBrush="#333" Padding="15,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="🔷" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="VPP Platform" FontSize="18" FontWeight="Bold"
+                              Foreground="White" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="💾 Save" Command="{Binding SaveWorkflowCommand}" Focusable="False"
+                            Background="#4CAF50" Foreground="White" Padding="15,8" Margin="0,0,8,0"
+                            BorderThickness="0" FontWeight="SemiBold" Cursor="Hand"/>
+                    <Button Content="📂 Load" Command="{Binding LoadWorkflowCommand}" Focusable="False"
+                            Background="#00BCD4" Foreground="White" Padding="15,8"
+                            BorderThickness="0" FontWeight="SemiBold" Cursor="Hand"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- Main Content -->
+        <!-- Main Content Area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="*">
-                </ColumnDefinition>
+                <ColumnDefinition Width="1.2*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Node Editor -->
-            <Border Grid.Column="0" Background="#1A1A1A" Margin="5">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <!-- Left Tab Navigation Sidebar -->
+            <Border Grid.Column="0" Background="#0A0A0A" BorderThickness="0,0,1,0" BorderBrush="#222">
+                <StackPanel>
+                    <TextBlock Text="NAVIGATION" FontSize="11" FontWeight="Bold"
+                              Foreground="#666" Padding="15,15,15,10"/>
 
-                    <TextBlock Text="Node Graph Editor" FontSize="14" FontWeight="Bold"
-                               Foreground="White" Padding="10"/>
+                    <RadioButton x:Name="TabWorkflow" Content="Workflow" Tag="📊" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=0, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Hardware" Tag="⚙️" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=1, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Results" Tag="📈" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=2, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Events" Tag="🔔" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=3, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Analytics" Tag="📊" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=4, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Export" Tag="💾" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=5, Mode=TwoWay}"
+                                Focusable="False"/>
+                    <RadioButton Content="Settings" Tag="🔧" Style="{StaticResource TabButtonStyle}"
+                                IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IndexToBoolConverter}, ConverterParameter=6, Mode=TwoWay}"
+                                Focusable="False"/>
 
-                    <!-- Node Graph Viewport -->
-                    <Grid Grid.Row="1" x:Name="NodeGraphViewport" Background="#252525" ClipToBounds="True"
-                          MouseRightButtonDown="NodeCanvas_MouseRightButtonDown"
-                          MouseLeftButtonDown="NodeCanvas_MouseLeftButtonDown"
-                          MouseWheel="NodeCanvas_MouseWheel"
-                          MouseMove="NodeCanvas_MouseMove"
-                          MouseLeftButtonUp="NodeCanvas_MouseLeftButtonUp">
-                        
-                        <!-- Context Menu -->
-                        <Grid.ContextMenu>
-                            <ContextMenu x:Name="AddNodeContextMenu" Background="#2D2D2D" Opened="AddNodeContextMenu_Opened">
-                                <ContextMenu.Template>
-                                    <ControlTemplate TargetType="ContextMenu">
-                                        <Border Background="#2D2D2D" BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="5">
-                                            <StackPanel>
-                                                <TextBox x:Name="NodeSearchBox"
-                                                         Background="#1A1A1A" Foreground="White"
-                                                         BorderBrush="#555" Padding="8"
-                                                         Text="{Binding NodeSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                         TextChanged="NodeSearchBox_TextChanged"/>
-                                                <ListBox x:Name="NodeListBox"
-                                                         ItemsSource="{Binding FilteredNodes}"
-                                                         Background="#2D2D2D" Foreground="White"
-                                                         BorderThickness="0" MaxHeight="200"
-                                                         SelectionChanged="NodeListBox_SelectionChanged"
-                                                         KeyDown="NodeListBox_KeyDown">
-                                                    <ListBox.ItemContainerStyle>
-                                                        <Style TargetType="ListBoxItem">
-                                                            <Setter Property="Padding" Value="8,4"/>
-                                                            <Setter Property="Cursor" Value="Hand"/>
-                                                            <Style.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Background" Value="#3D3D3D"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsSelected" Value="True">
-                                                                    <Setter Property="Background" Value="#2196F3"/>
-                                                                </Trigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ListBox.ItemContainerStyle>
-                                                </ListBox>
-                                            </StackPanel>
-                                        </Border>
-                                    </ControlTemplate>
-                                </ContextMenu.Template>
-                            </ContextMenu>
-                        </Grid.ContextMenu>
+                    <Separator Background="#222" Margin="10,15"/>
 
-                        <!-- Node Canvas -->
-                        <Canvas x:Name="NodeCanvas" Background="Transparent">
-                            <Canvas.RenderTransform>
-                                <TranslateTransform x:Name="NodeCanvasTranslateTransform" X="0" Y="0"/>
-                            </Canvas.RenderTransform>
+                    <TextBlock Text="SYSTEM INFO" FontSize="11" FontWeight="Bold"
+                              Foreground="#666" Padding="15,10,15,5"/>
 
-                        <!-- Connection Lines -->
-                        <ItemsControl ItemsSource="{Binding Connections}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <Canvas/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Path Stroke="#2196F3" 
-                                          StrokeThickness="3"
-                                          Cursor="Hand"
-                                          MouseLeftButtonDown="Connection_MouseLeftButtonDown"
-                                          Tag="{Binding}"
-                                          Data="{Binding PathGeometry}">
-                                        <Path.Style>
-                                            <Style TargetType="Path">
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Stroke" Value="#FF5722"/>
-                                                        <Setter Property="StrokeThickness" Value="4"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Path.Style>
-                                    </Path>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                    <StackPanel Padding="15,5">
+                        <TextBlock Text="💻 Status" Foreground="#888" FontSize="10" Margin="0,0,0,3"/>
+                        <TextBlock Text="Online" Foreground="#4CAF50" FontSize="12" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <!-- Temp Connection Line -->
-                        <Path x:Name="TempConnectionLine" Stroke="#FF9800" StrokeThickness="2"
-                              StrokeDashArray="4 2" Visibility="Collapsed"/>
+                        <TextBlock Text="⚡ Performance" Foreground="#888" FontSize="10" Margin="0,0,0,3"/>
+                        <TextBlock Text="Optimal" Foreground="#2196F3" FontSize="12" FontWeight="Bold" Margin="0,0,0,10"/>
 
-                        <!-- Selection Box -->
-                        <Rectangle x:Name="SelectionBox"
-                                   Stroke="#2196F3"
-                                   StrokeThickness="1"
-                                   StrokeDashArray="4 2"
-                                   Fill="#1A2196F3"
-                                   Visibility="Collapsed"
-                                   IsHitTestVisible="False"/>
-
-                        <!-- Nodes -->
-                        <ItemsControl ItemsSource="{Binding Nodes}" x:Name="NodesItemsControl">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <Canvas/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemContainerStyle>
-                                <Style TargetType="ContentPresenter">
-                                    <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                    <Setter Property="Canvas.Top" Value="{Binding Y}"/>
-                                </Style>
-                            </ItemsControl.ItemContainerStyle>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource NodeStyle}"
-                                            BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBorderConverter}}">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-
-                                            <!-- Title Bar -->
-                                            <Border Grid.Row="0"
-                                                    Background="#2196F3"
-                                                    CornerRadius="6,6,0,0" 
-                                                    Padding="10,6"
-                                                    Cursor="SizeAll"
-                                                    MouseLeftButtonDown="NodeHeader_MouseLeftButtonDown"
-                                                    MouseMove="NodeHeader_MouseMove"
-                                                    MouseLeftButtonUp="NodeHeader_MouseLeftButtonUp">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                           Foreground="White" IsHitTestVisible="False"/>
-                                            </Border>
-
-                                            <!-- Ports Row -->
-                                            <Grid Grid.Row="1" Margin="8,8,8,4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- Input Port -->
-                                                <Ellipse Grid.Column="0" 
-                                                         Width="12" Height="12" 
-                                                         Fill="#4CAF50"
-                                                         Stroke="White"
-                                                         StrokeThickness="2"
-                                                         VerticalAlignment="Center"
-                                                         Cursor="Hand"
-                                                         MouseLeftButtonDown="InputPort_MouseDown"
-                                                         MouseLeftButtonUp="Port_MouseUp"
-                                                         Tag="{Binding}"/>
-
-                                                <!-- Output Port -->
-                                                <Ellipse Grid.Column="2" 
-                                                         Width="12" Height="12" 
-                                                         Fill="#FF9800"
-                                                         Stroke="White"
-                                                         StrokeThickness="2"
-                                                         VerticalAlignment="Center"
-                                                         Cursor="Hand"
-                                                         MouseLeftButtonDown="OutputPort_MouseDown"
-                                                         MouseLeftButtonUp="Port_MouseUp"
-                                                         Tag="{Binding}"/>
-                                            </Grid>
-
-                                            <!-- Parameters -->
-                                            <Grid Grid.Row="2" Margin="8,0,8,8">
-                                                <ItemsControl ItemsSource="{Binding Parameters}" 
-                                                              VerticalAlignment="Top" MinHeight="20">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Border Background="Transparent" Padding="2,2" Cursor="Hand"
-                                                                    MouseLeftButtonUp="ParameterRow_MouseLeftButtonUp"
-                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="9" FontWeight="SemiBold" Width="70"/>
-                                                                    <TextBlock Text="{Binding Value}" Foreground="#888" FontSize="8" TextTrimming="CharacterEllipsis" MaxWidth="130"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </Grid>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Canvas>
-                    </Grid>
-                </Grid>
+                        <TextBlock Text="📡 Devices" Foreground="#888" FontSize="10" Margin="0,0,0,3"/>
+                        <TextBlock Text="{Binding HardwareDevices.Count, StringFormat={}{0} Connected}"
+                                  Foreground="#FF9800" FontSize="12" FontWeight="Bold"/>
+                    </StackPanel>
+                </StackPanel>
             </Border>
 
-            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#333"/>
+            <!-- Content Area (Left Panel - Tab Content) -->
+            <Grid Grid.Column="1" Background="#121212">
+                <!-- Tab 0: Workflow Editor (Node Graph) -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=0}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-            <!-- 3D Viewer -->
-            <Border Grid.Column="2" Background="#1A1A1A" Margin="5">
+                        <Border Grid.Row="0" Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333">
+                            <TextBlock Text="📊 Workflow Editor" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                        </Border>
+
+                        <!-- Node Graph Viewport -->
+                        <Grid Grid.Row="1" x:Name="NodeGraphViewport" Background="#0F0F0F" ClipToBounds="True"
+                              MouseRightButtonDown="NodeCanvas_MouseRightButtonDown"
+                              MouseLeftButtonDown="NodeCanvas_MouseLeftButtonDown"
+                              MouseWheel="NodeCanvas_MouseWheel"
+                              MouseMove="NodeCanvas_MouseMove"
+                              MouseLeftButtonUp="NodeCanvas_MouseLeftButtonUp">
+
+                            <!-- Context Menu -->
+                            <Grid.ContextMenu>
+                                <ContextMenu x:Name="AddNodeContextMenu" Background="#2D2D2D" Opened="AddNodeContextMenu_Opened">
+                                    <ContextMenu.Template>
+                                        <ControlTemplate TargetType="ContextMenu">
+                                            <Border Background="#2D2D2D" BorderBrush="#555" BorderThickness="1" CornerRadius="4" Padding="5">
+                                                <StackPanel>
+                                                    <TextBox x:Name="NodeSearchBox"
+                                                             Background="#1A1A1A" Foreground="White"
+                                                             BorderBrush="#555" Padding="8"
+                                                             Text="{Binding NodeSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                             TextChanged="NodeSearchBox_TextChanged"/>
+                                                    <ListBox x:Name="NodeListBox"
+                                                             ItemsSource="{Binding FilteredNodes}"
+                                                             Background="#2D2D2D" Foreground="White"
+                                                             BorderThickness="0" MaxHeight="200"
+                                                             SelectionChanged="NodeListBox_SelectionChanged"
+                                                             KeyDown="NodeListBox_KeyDown">
+                                                        <ListBox.ItemContainerStyle>
+                                                            <Style TargetType="ListBoxItem">
+                                                                <Setter Property="Padding" Value="8,4"/>
+                                                                <Setter Property="Cursor" Value="Hand"/>
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Background" Value="#3D3D3D"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsSelected" Value="True">
+                                                                        <Setter Property="Background" Value="#2196F3"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ListBox.ItemContainerStyle>
+                                                    </ListBox>
+                                                </StackPanel>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ContextMenu.Template>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+
+                            <!-- Node Canvas -->
+                            <Canvas x:Name="NodeCanvas" Background="Transparent">
+                                <Canvas.RenderTransform>
+                                    <TranslateTransform x:Name="NodeCanvasTranslateTransform" X="0" Y="0"/>
+                                </Canvas.RenderTransform>
+
+                            <!-- Connection Lines -->
+                            <ItemsControl ItemsSource="{Binding Connections}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Path Stroke="#2196F3"
+                                              StrokeThickness="3"
+                                              Cursor="Hand"
+                                              MouseLeftButtonDown="Connection_MouseLeftButtonDown"
+                                              Tag="{Binding}"
+                                              Data="{Binding PathGeometry}">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Stroke" Value="#FF5722"/>
+                                                            <Setter Property="StrokeThickness" Value="4"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Temp Connection Line -->
+                            <Path x:Name="TempConnectionLine" Stroke="#FF9800" StrokeThickness="2"
+                                  StrokeDashArray="4 2" Visibility="Collapsed"/>
+
+                            <!-- Selection Box -->
+                            <Rectangle x:Name="SelectionBox"
+                                       Stroke="#2196F3"
+                                       StrokeThickness="1"
+                                       StrokeDashArray="4 2"
+                                       Fill="#1A2196F3"
+                                       Visibility="Collapsed"
+                                       IsHitTestVisible="False"/>
+
+                            <!-- Nodes -->
+                            <ItemsControl ItemsSource="{Binding Nodes}" x:Name="NodesItemsControl">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource NodeStyle}"
+                                                BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToBorderConverter}}">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Title Bar -->
+                                                <Border Grid.Row="0"
+                                                        Background="#2196F3"
+                                                        CornerRadius="6,6,0,0"
+                                                        Padding="10,6"
+                                                        Cursor="SizeAll"
+                                                        MouseLeftButtonDown="NodeHeader_MouseLeftButtonDown"
+                                                        MouseMove="NodeHeader_MouseMove"
+                                                        MouseLeftButtonUp="NodeHeader_MouseLeftButtonUp">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                               Foreground="White" IsHitTestVisible="False"/>
+                                                </Border>
+
+                                                <!-- Ports Row -->
+                                                <Grid Grid.Row="1" Margin="8,8,8,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Input Port -->
+                                                    <Ellipse Grid.Column="0"
+                                                             Width="12" Height="12"
+                                                             Fill="#4CAF50"
+                                                             Stroke="White"
+                                                             StrokeThickness="2"
+                                                             VerticalAlignment="Center"
+                                                             Cursor="Hand"
+                                                             MouseLeftButtonDown="InputPort_MouseDown"
+                                                             MouseLeftButtonUp="Port_MouseUp"
+                                                             Tag="{Binding}"/>
+
+                                                    <!-- Output Port -->
+                                                    <Ellipse Grid.Column="2"
+                                                             Width="12" Height="12"
+                                                             Fill="#FF9800"
+                                                             Stroke="White"
+                                                             StrokeThickness="2"
+                                                             VerticalAlignment="Center"
+                                                             Cursor="Hand"
+                                                             MouseLeftButtonDown="OutputPort_MouseDown"
+                                                             MouseLeftButtonUp="Port_MouseUp"
+                                                             Tag="{Binding}"/>
+                                                </Grid>
+
+                                                <!-- Parameters -->
+                                                <Grid Grid.Row="2" Margin="8,0,8,8">
+                                                    <ItemsControl ItemsSource="{Binding Parameters}"
+                                                                  VerticalAlignment="Top" MinHeight="20">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="Transparent" Padding="2,2" Cursor="Hand"
+                                                                        MouseLeftButtonUp="ParameterRow_MouseLeftButtonUp"
+                                                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="9" FontWeight="SemiBold" Width="70"/>
+                                                                        <TextBlock Text="{Binding Value}" Foreground="#888" FontSize="8" TextTrimming="CharacterEllipsis" MaxWidth="130"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Canvas>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Tab 1: Hardware Settings -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333" Margin="0,0,0,10">
+                                <TextBlock Text="⚙️ Hardware Configuration" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Connected Devices" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <ItemsControl ItemsSource="{Binding HardwareDevices}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#252525" BorderBrush="#333" BorderThickness="1"
+                                                       CornerRadius="6" Padding="15" Margin="0,0,0,10">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0" Text="{Binding TypeIcon}"
+                                                                  FontSize="32" VerticalAlignment="Center" Margin="0,0,15,0"/>
+
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                                                            <TextBlock Text="{Binding Description}" FontSize="11" Foreground="#888" Margin="0,3,0,0"/>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                                                <TextBlock Text="Status:" Foreground="#666" FontSize="10" Margin="0,0,5,0"/>
+                                                                <TextBlock Text="{Binding Status}" Foreground="{Binding StatusColor}"
+                                                                          FontSize="10" FontWeight="Bold"/>
+                                                                <TextBlock Text="Type:" Foreground="#666" FontSize="10" Margin="15,0,5,0"/>
+                                                                <TextBlock Text="{Binding Type}" Foreground="#2196F3" FontSize="10" FontWeight="Bold"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+
+                                                        <ToggleButton Grid.Column="2" IsChecked="{Binding IsEnabled}"
+                                                                     Command="{Binding DataContext.ToggleHardwareDeviceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                     CommandParameter="{Binding}"
+                                                                     Width="80" Height="36" Focusable="False">
+                                                            <ToggleButton.Style>
+                                                                <Style TargetType="ToggleButton">
+                                                                    <Setter Property="Content" Value="Enable"/>
+                                                                    <Setter Property="Background" Value="#555"/>
+                                                                    <Setter Property="Foreground" Value="White"/>
+                                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                                    <Setter Property="Template">
+                                                                        <Setter.Value>
+                                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                                <Border Background="{TemplateBinding Background}"
+                                                                                       CornerRadius="4"
+                                                                                       Padding="{TemplateBinding Padding}">
+                                                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                                                    VerticalAlignment="Center"
+                                                                                                    TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                                                                </Border>
+                                                                            </ControlTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                    <Style.Triggers>
+                                                                        <Trigger Property="IsChecked" Value="True">
+                                                                            <Setter Property="Content" Value="Disable"/>
+                                                                            <Setter Property="Background" Value="#4CAF50"/>
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter Property="Opacity" Value="0.8"/>
+                                                                        </Trigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </ToggleButton.Style>
+                                                        </ToggleButton>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Tab 2: Results Dashboard -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333" Margin="0,0,0,10">
+                                <TextBlock Text="📈 Results Dashboard" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+
+                            <!-- Execution Statistics -->
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Execution Statistics" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Background="#252525" CornerRadius="6" Padding="15" Margin="0,0,5,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Total Executions" FontSize="11" Foreground="#888"/>
+                                                <TextBlock Text="{Binding TotalExecutions}" FontSize="32" FontWeight="Bold"
+                                                          Foreground="#2196F3" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Background="#252525" CornerRadius="6" Padding="15" Margin="5,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Successful" FontSize="11" Foreground="#888"/>
+                                                <TextBlock Text="{Binding SuccessfulExecutions}" FontSize="32" FontWeight="Bold"
+                                                          Foreground="#4CAF50" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="2" Background="#252525" CornerRadius="6" Padding="15" Margin="5,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Failed" FontSize="11" Foreground="#888"/>
+                                                <TextBlock Text="{Binding FailedExecutions}" FontSize="32" FontWeight="Bold"
+                                                          Foreground="#F44336" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Inspection Results -->
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Latest Inspection Result" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <Border Background="#252525" CornerRadius="6" Padding="20">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding InspectionResult}" FontSize="16" Foreground="White"
+                                                      TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                                            <Border Padding="15,10" CornerRadius="4"
+                                                   Background="{Binding InspectionPass, Converter={StaticResource PassFailConverter}}">
+                                                <TextBlock FontSize="28" FontWeight="Black" Foreground="White" TextAlignment="Center"
+                                                          Text="{Binding InspectionPass, Converter={StaticResource PassFailTextConverter}}"/>
+                                            </Border>
+
+                                            <StackPanel Orientation="Horizontal" Margin="0,15,0,0" HorizontalAlignment="Center">
+                                                <StackPanel Margin="0,0,30,0">
+                                                    <TextBlock Text="Detected Radius" FontSize="11" Foreground="#888" TextAlignment="Center"/>
+                                                    <TextBlock Text="{Binding DetectedRadius, StringFormat=F3}" FontSize="24" FontWeight="Bold"
+                                                              Foreground="#2196F3" TextAlignment="Center" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel>
+                                                    <TextBlock Text="Center Position" FontSize="11" Foreground="#888" TextAlignment="Center"/>
+                                                    <TextBlock Text="{Binding DetectedCenter}" FontSize="12" FontWeight="Bold"
+                                                              Foreground="#FF9800" TextAlignment="Center" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Tab 3: Event Manager -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333">
+                            <Grid>
+                                <TextBlock Text="🔔 Event Log Manager" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Content="Clear Logs" Command="{Binding ClearEventLogsCommand}"
+                                       HorizontalAlignment="Right" Background="#F44336" Foreground="White"
+                                       Padding="12,6" BorderThickness="0" FontWeight="SemiBold" Cursor="Hand" Focusable="False"/>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10">
+                            <ItemsControl ItemsSource="{Binding EventLogs}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#1A1A1A" BorderBrush="#333" BorderThickness="1"
+                                               CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="{Binding TypeIcon}" FontSize="16"
+                                                          Foreground="{Binding TypeColor}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                                                <TextBlock Grid.Column="1" Text="{Binding Timestamp, StringFormat=HH:mm:ss}"
+                                                          FontSize="11" Foreground="#666" VerticalAlignment="Center" Margin="0,0,15,0"
+                                                          FontFamily="Consolas"/>
+
+                                                <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="12"
+                                                          Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <Border Grid.Row="2" Background="#1A1A1A" Padding="15" BorderThickness="0,1,0,0" BorderBrush="#333">
+                            <TextBlock Text="{Binding EventLogs.Count, StringFormat=Total Events: {0}}"
+                                      FontSize="12" Foreground="#888"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Tab 4: Analytics -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333" Margin="0,0,0,10">
+                                <TextBlock Text="📊 Analytics &amp; Monitoring" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Performance Metrics" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <ItemsControl ItemsSource="{Binding AnalyticsMetrics}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#252525" BorderBrush="#333" BorderThickness="1"
+                                                       CornerRadius="6" Padding="15" Margin="0,0,0,10">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="2*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13"
+                                                                  Foreground="White" VerticalAlignment="Center" FontWeight="Medium"/>
+
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Value, StringFormat=F1}" FontSize="20"
+                                                                      Foreground="#2196F3" FontWeight="Bold" Margin="0,0,5,0"/>
+                                                            <TextBlock Text="{Binding Unit}" FontSize="12"
+                                                                      Foreground="#666" VerticalAlignment="Bottom" Margin="0,0,0,2"/>
+                                                        </StackPanel>
+
+                                                        <TextBlock Grid.Column="2" Text="{Binding Trend}" FontSize="18"
+                                                                  Foreground="{Binding TrendColor}" VerticalAlignment="Center" Margin="0,0,15,0"/>
+
+                                                        <Border Grid.Column="3" Background="{Binding StatusColor}"
+                                                               CornerRadius="12" Padding="12,4" MinWidth="80">
+                                                            <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold"
+                                                                      Foreground="White" TextAlignment="Center"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Tab 5: Data Export -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=5}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333" Margin="0,0,0,10">
+                                <TextBlock Text="💾 Data Export" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Export Configuration" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <TextBlock Text="Select Format" FontSize="12" Foreground="#888" Margin="0,0,0,5"/>
+                                    <ComboBox SelectedItem="{Binding ExportFormat}" FontSize="13" Padding="10" Margin="0,0,0,15" Focusable="False">
+                                        <ComboBoxItem Content="JSON" IsSelected="True"/>
+                                        <ComboBoxItem Content="CSV"/>
+                                        <ComboBoxItem Content="XML"/>
+                                        <ComboBoxItem Content="PLY"/>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Export Options" FontSize="12" Foreground="#888" Margin="0,0,0,10"/>
+                                    <CheckBox Content="Include Visualization Data" IsChecked="{Binding IncludeVisualization}"
+                                             Foreground="White" Margin="0,0,0,8" Focusable="False"/>
+                                    <CheckBox Content="Include Metadata" IsChecked="{Binding IncludeMetadata}"
+                                             Foreground="White" Margin="0,0,0,15" Focusable="False"/>
+
+                                    <Button Content="📥 Export Data" Command="{Binding ExportDataCommand}"
+                                           Background="#4CAF50" Foreground="White" Padding="15,12"
+                                           BorderThickness="0" FontSize="14" FontWeight="Bold" Cursor="Hand" Focusable="False"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Tab 6: Settings -->
+                <Border Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=6}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333" Margin="0,0,0,10">
+                                <TextBlock Text="🔧 System Settings" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Application Preferences" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+
+                                    <TextBlock Text="Theme" FontSize="12" Foreground="#888" Margin="0,0,0,5"/>
+                                    <ComboBox FontSize="13" Padding="10" Margin="0,0,0,15" Focusable="False">
+                                        <ComboBoxItem Content="Dark (Current)" IsSelected="True"/>
+                                        <ComboBoxItem Content="Light"/>
+                                        <ComboBoxItem Content="High Contrast"/>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Point Cloud Rendering" FontSize="12" Foreground="#888" Margin="0,0,0,10"/>
+                                    <CheckBox Content="Enable GPU Acceleration" IsChecked="True" Foreground="White" Margin="0,0,0,8" Focusable="False"/>
+                                    <CheckBox Content="Auto-fit Camera on Load" IsChecked="True" Foreground="White" Margin="0,0,0,8" Focusable="False"/>
+                                    <CheckBox Content="Show Coordinate System" IsChecked="True" Foreground="White" Margin="0,0,0,15" Focusable="False"/>
+
+                                    <TextBlock Text="Advanced" FontSize="12" Foreground="#888" Margin="0,0,0,10"/>
+                                    <CheckBox Content="Enable Debug Mode" Foreground="White" Margin="0,0,0,8" Focusable="False"/>
+                                    <CheckBox Content="Log All Events" IsChecked="True" Foreground="White" Margin="0,0,0,15" Focusable="False"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="About" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Visual Programming Platform v2.0" FontSize="12" Foreground="#888" Margin="0,0,0,5"/>
+                                    <TextBlock Text="3D Point Cloud Inspection System" FontSize="12" Foreground="#888" Margin="0,0,0,5"/>
+                                    <TextBlock Text="© 2025 - Advanced Manufacturing Solutions" FontSize="11" Foreground="#666" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Column="2" Width="5" HorizontalAlignment="Stretch" Background="#222"/>
+
+            <!-- Right Panel: 3D Viewer (Always Visible) -->
+            <Border Grid.Column="3" Background="#0F0F0F" Margin="5">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -276,30 +749,29 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <DockPanel Grid.Column="0" LastChildFill="False" Margin="0">
-                            <TextBlock Text="3D Point Cloud Visualization (Realtime)" FontSize="14" FontWeight="Bold"
-                                       Foreground="White" Padding="10"/>
-                        </DockPanel>
+                        <Border Grid.Column="0" Background="#1A1A1A" Padding="15" BorderThickness="0,0,0,1" BorderBrush="#333">
+                            <TextBlock Text="🎥 3D Point Cloud Visualization (Realtime)" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                        </Border>
 
                         <!-- ROI Drawing Tools Panel -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="5"
-                                    Visibility="{Binding IsRoiDrawingMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="ROI Shape:" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Button Content="Box" Width="60" Margin="2" Background="#4CAF50" Foreground="White" Focusable="False"
-                                    Click="RoiShapeBox_Click" ToolTip="Draw 3D Box ROI"/>
-                            <Button Content="Cylinder" Width="70" Margin="2" Background="#2196F3" Foreground="White" Focusable="False"
-                                    Click="RoiShapeCylinder_Click" ToolTip="Draw Cylinder ROI"/>
-                            <Button Content="Sphere" Width="70" Margin="2" Background="#FF9800" Foreground="White" Focusable="False"
-                                    Click="RoiShapeSphere_Click" ToolTip="Draw Sphere ROI"/>
+                                    Visibility="{Binding IsRoiDrawingMode, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Background="#1A1A1A" Padding="10,0">
+                            <TextBlock Text="ROI Shape:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"/>
+                            <Button Content="📦 Box" Width="70" Margin="2" Background="#4CAF50" Foreground="White" Focusable="False"
+                                    Click="RoiShapeBox_Click" ToolTip="Draw 3D Box ROI" Padding="8,6" BorderThickness="0"/>
+                            <Button Content="🛢️ Cylinder" Width="85" Margin="2" Background="#2196F3" Foreground="White" Focusable="False"
+                                    Click="RoiShapeCylinder_Click" ToolTip="Draw Cylinder ROI" Padding="8,6" BorderThickness="0"/>
+                            <Button Content="🔮 Sphere" Width="75" Margin="2" Background="#FF9800" Foreground="White" Focusable="False"
+                                    Click="RoiShapeSphere_Click" ToolTip="Draw Sphere ROI" Padding="8,6" BorderThickness="0"/>
                         </StackPanel>
 
-                        <!-- Action Buttons Panel - shown only when nodes are selected -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-                            <!-- ROI Filter Toggle shown only when ROI Filter node is selected -->
+                        <!-- Action Buttons Panel -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0" VerticalAlignment="Center"
+                                   Background="#1A1A1A" Padding="10,8">
+                            <!-- ROI Filter Toggle -->
                             <ToggleButton Focusable="False"
-                                          Width="38"
-                                          Padding="8,6"
-                                          Margin="0,0,5,0"
+                                          Width="45" Padding="8,6" Margin="0,0,8,0"
                                           IsChecked="{Binding IsRoiFilterOn, Mode=TwoWay}"
                                           Visibility="{Binding IsRoiFilterToggleVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                           ToolTip="Toggle ROI Filter ON/OFF">
@@ -309,12 +781,12 @@
                                         <Setter Property="Background" Value="#555"/>
                                         <Setter Property="Foreground" Value="White"/>
                                         <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="FontWeight" Value="Normal"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ToggleButton">
                                                     <Border Background="{TemplateBinding Background}"
-                                                            CornerRadius="2"
+                                                            CornerRadius="4"
                                                             Padding="{TemplateBinding Padding}">
                                                         <ContentPresenter HorizontalAlignment="Center"
                                                                         VerticalAlignment="Center"
@@ -329,42 +801,37 @@
                                                 <Setter Property="Background" Value="#4CAF50"/>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Opacity" Value="0.9"/>
+                                                <Setter Property="Opacity" Value="0.85"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
                                 </ToggleButton.Style>
                             </ToggleButton>
 
-                            <!-- Circle Detection Button shown only when Circle Detection node is selected -->
-                            <Button Content="Detect" Focusable="False"
-                                    Width="60"
-                                    Padding="8,6"
-                                    Margin="0,0,5,0"
-                                    Background="#00BCD4" Foreground="White"
+                            <!-- Circle Detection Button -->
+                            <Button Content="🎯 Detect" Focusable="False" Width="75" Padding="10,6" Margin="0,0,8,0"
+                                    Background="#00BCD4" Foreground="White" BorderThickness="0" FontWeight="Bold"
                                     Command="{Binding DetectCircleCommand}"
                                     Visibility="{Binding IsCircleDetectButtonVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ToolTip="Detect 2D circle in filtered point cloud"/>
 
-                            <!-- Inspection Button shown only when Inspection node is selected -->
-                            <Button Content="Inspect" Focusable="False"
-                                    Width="60"
-                                    Padding="8,6"
-                                    Margin="0,0,5,0"
-                                    Background="#FF9800" Foreground="White"
+                            <!-- Inspection Button -->
+                            <Button Content="🔍 Inspect" Focusable="False" Width="80" Padding="10,6" Margin="0,0,8,0"
+                                    Background="#FF9800" Foreground="White" BorderThickness="0" FontWeight="Bold"
                                     Command="{Binding InspectCommand}"
                                     Visibility="{Binding IsInspectButtonVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ToolTip="Inspect detected circle against specifications"/>
 
                             <!-- Fit Camera Button -->
-                            <Button Content="Fit" Width="50" Padding="8,6" Focusable="False"
+                            <Button Content="📐 Fit" Width="60" Padding="10,6" Focusable="False"
+                                    Background="#673AB7" Foreground="White" BorderThickness="0" FontWeight="Bold"
                                     ToolTip="Fit camera to point cloud"
                                     Click="FitCameraButton_Click"
                                     Visibility="{Binding IsRoiDrawingMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                         </StackPanel>
                     </Grid>
 
-                    <Border Grid.Row="1" Background="#252525">
+                    <Border Grid.Row="1" Background="#0A0A0A">
                         <Grid>
                             <helix:Viewport3DX x:Name="Viewport3D"
                                            ShowCoordinateSystem="True"
@@ -373,7 +840,7 @@
                                            EffectsManager="{Binding Scene.EffectsManager}"
                                            EnableSwapChainRendering="True"
                                            MSAA="Maximum"
-                                           BackgroundColor="#101014"
+                                           BackgroundColor="#0A0A0A"
                                            Focusable="True"
                                            CameraRotationMode="Turntable"
                                            RotateAroundMouseDownPoint="False"
@@ -382,32 +849,39 @@
                             <helix:DirectionalLight3D Direction="-1,-1,-1" Color="#FFFFFF"/>
                             <helix:DirectionalLight3D Direction="1,1,1" Color="#404040"/>
                             <helix:AmbientLight3D Color="#303030"/>
-                            <!-- Separate colored origin axes -->
+
+                            <!-- Origin axes -->
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginXGeometry}" Thickness="2" Color="Red"/>
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginYGeometry}" Thickness="2" Color="Green"/>
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.OriginZGeometry}" Thickness="2" Color="Blue"/>
+
+                            <!-- Point Cloud -->
                             <helix:PointGeometryModel3D x:Name="PointCloudVisual"
                                                         Geometry="{Binding Scene.PointCloudGeometry}"
                                                         Color="{Binding Scene.PointCloudColor}"
                                                         Size="{Binding Scene.PointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
-                            <!-- Detected Circle Points (shown in different color) -->
+
+                            <!-- Detected Circle Points -->
                             <helix:PointGeometryModel3D x:Name="DetectedCircleVisual"
                                                         Geometry="{Binding Scene.DetectedCircleGeometry}"
                                                         Color="{Binding Scene.DetectedCircleColor}"
                                                         Size="{Binding Scene.DetectedCirclePointSize, Converter={StaticResource DoubleToSizeConverter}}"/>
-                            <!-- Detected Circle Outline (red circle) -->
+
+                            <!-- Detected Circle Outline -->
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.DetectedCircleOutlineGeometry}"
                                                       Thickness="4"
                                                       Color="Red"/>
+
                             <!-- Multiple Detected Circles -->
                             <helix:GroupModel3D ItemsSource="{Binding Scene.DetectedCircleModels}"/>
+
                             <!-- Multiple ROI Models -->
                             <helix:GroupModel3D ItemsSource="{Binding Scene.RoiModels}"/>
-                            <!-- Legacy Single ROI Wireframe (fallback for compatibility) -->
+
+                            <!-- Legacy Single ROI -->
                             <helix:LineGeometryModel3D Geometry="{Binding Scene.RoiWireframeGeometry}"
                                                       Thickness="3"
                                                       Color="{Binding Scene.RoiWireframeColor}"/>
-                            <!-- Legacy Single ROI Center Point (fallback for compatibility) -->
                             <helix:MeshGeometryModel3D Geometry="{Binding Scene.RoiCenterPointGeometry}">
                                 <helix:MeshGeometryModel3D.Material>
                                     <helix:PhongMaterial DiffuseColor="Red"/>
@@ -415,27 +889,27 @@
                             </helix:MeshGeometryModel3D>
                         </helix:Viewport3DX>
 
-                        <!-- Inspection Result Overlay (shown only when Inspection node is selected) -->
+                        <!-- Inspection Result Overlay -->
                         <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Background="#CC000000"
-                                Padding="40,20"
-                                CornerRadius="10"
+                                Background="#DD000000"
+                                Padding="40,25"
+                                CornerRadius="12"
                                 Visibility="{Binding IsInspectButtonVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Border.Effect>
-                                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="5" Opacity="0.8"/>
+                                <DropShadowEffect Color="Black" BlurRadius="25" ShadowDepth="8" Opacity="0.9"/>
                             </Border.Effect>
                             <StackPanel>
                                 <TextBlock Text="{Binding InspectionResult}"
-                                           FontSize="36" FontWeight="Bold"
+                                           FontSize="32" FontWeight="Bold"
                                            Foreground="White"
                                            TextAlignment="Center"
                                            TextWrapping="Wrap"
                                            MaxWidth="600"/>
-                                <Border Margin="0,15,0,0"
-                                        Padding="20,10"
-                                        CornerRadius="5"
+                                <Border Margin="0,20,0,0"
+                                        Padding="25,12"
+                                        CornerRadius="6"
                                         Background="{Binding InspectionPass, Converter={StaticResource PassFailConverter}}">
-                                    <TextBlock FontSize="48" FontWeight="Black"
+                                    <TextBlock FontSize="42" FontWeight="Black"
                                                Foreground="White"
                                                TextAlignment="Center"
                                                Text="{Binding InspectionPass, Converter={StaticResource PassFailTextConverter}}"/>
@@ -445,17 +919,18 @@
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="2" Padding="10"
+                    <Border Grid.Row="2" Padding="12"
                             Background="{Binding InspectionPass, Converter={StaticResource PassFailConverter}}"
-                            Visibility="{Binding IsResultPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsResultPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            BorderThickness="0,1,0,0" BorderBrush="#333">
                         <StackPanel>
                             <TextBlock Text="{Binding InspectionResult}"
-                                       FontSize="14" FontWeight="Bold"
+                                       FontSize="13" FontWeight="Bold"
                                        Foreground="White" TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                <TextBlock Text="Detected Radius: " Foreground="White"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <TextBlock Text="Detected Radius: " Foreground="White" FontSize="12"/>
                                 <TextBlock Text="{Binding DetectedRadius, StringFormat=F3}"
-                                           Foreground="White" FontWeight="Bold"/>
+                                           Foreground="White" FontWeight="Bold" FontSize="12"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -464,8 +939,14 @@
         </Grid>
 
         <!-- Status Bar -->
-        <Border Grid.Row="2" Background="#2D2D2D" Padding="10,5">
-            <TextBlock Text="{Binding StatusMessage}" Foreground="White"/>
+        <Border Grid.Row="2" Background="#1A1A1A" Padding="12,8" BorderThickness="0,1,0,0" BorderBrush="#333">
+            <Grid>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#BBB" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="⚡" FontSize="14" Margin="0,0,5,0"/>
+                    <TextBlock Text="Ready" Foreground="#4CAF50" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

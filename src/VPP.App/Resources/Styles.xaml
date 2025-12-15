@@ -9,7 +9,9 @@
     <conv:DoubleToSizeConverter x:Key="DoubleToSizeConverter"/>
     <conv:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
     <conv:PassFailTextConverter x:Key="PassFailTextConverter"/>
-    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    <conv:IndexToBoolConverter x:Key="IndexToBoolConverter"/>
+    <conv:IndexToVisibilityConverter x:Key="IndexToVisibilityConverter"/>
 
     <!-- Colors -->
     <Color x:Key="PrimaryColor">#2196F3</Color>

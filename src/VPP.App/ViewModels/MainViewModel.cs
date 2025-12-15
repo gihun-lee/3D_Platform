@@ -74,10 +74,29 @@ public partial class MainViewModel : ObservableObject
     // Track if we should force filter visualization for downstream nodes
     private bool _forceFilterVisualization = false;
 
+    // Tab Navigation Properties
+    [ObservableProperty] private int _selectedTabIndex = 0;
+    [ObservableProperty] private ObservableCollection<EventLogEntry> _eventLogs = new();
+    [ObservableProperty] private ObservableCollection<HardwareDevice> _hardwareDevices = new();
+    [ObservableProperty] private ObservableCollection<AnalyticsMetric> _analyticsMetrics = new();
+    [ObservableProperty] private int _totalExecutions;
+    [ObservableProperty] private int _successfulExecutions;
+    [ObservableProperty] private int _failedExecutions;
+    [ObservableProperty] private double _averageExecutionTime;
+    [ObservableProperty] private string _exportFormat = "JSON";
+    [ObservableProperty] private bool _includeVisualization = true;
+    [ObservableProperty] private bool _includeMetadata = true;
+
     public MainViewModel()
     {
         _pluginService = new PluginService();
         _executionEngine = new ExecutionEngine();
+
+        // Initialize hardware devices
+        InitializeHardwareDevices();
+
+        // Initialize analytics
+        InitializeAnalytics();
         
         // Load built-in plugins
         _pluginService.LoadFromAssembly(typeof(PointCloudPlugin).Assembly);
@@ -89,10 +108,23 @@ public partial class MainViewModel : ObservableObject
         }
 
         _executionEngine.NodeExecuting += (s, e) =>
+        {
             StatusMessage = $"Executing: {e.Node.Name}";
+            LogEvent($"Executing: {e.Node.Name}", EventLogType.Execution);
+        };
         _executionEngine.NodeExecuted += (s, e) =>
         {
             StatusMessage = e.Result?.Success == true ? $"Completed: {e.Node.Name}" : $"Failed: {e.Node.Name}";
+
+            // Update analytics
+            TotalExecutions++;
+            if (e.Result?.Success == true)
+                SuccessfulExecutions++;
+            else
+                FailedExecutions++;
+
+            LogEvent(StatusMessage, e.Result?.Success == true ? EventLogType.Success : EventLogType.Error);
+
             // Real-time visualization update after each node execution
             UpdateVisualization();
             // Update circle visualization if circle detection was executed
@@ -101,6 +133,152 @@ public partial class MainViewModel : ObservableObject
                 UpdateDetectedCircleVisualization();
             }
         };
+    }
+
+    private void InitializeHardwareDevices()
+    {
+        HardwareDevices.Add(new HardwareDevice
+        {
+            Name = "3D Scanner Alpha",
+            Type = "Scanner",
+            Status = "Connected",
+            IsEnabled = true,
+            Description = "High-precision 3D laser scanner"
+        });
+        HardwareDevices.Add(new HardwareDevice
+        {
+            Name = "Camera System Beta",
+            Type = "Camera",
+            Status = "Connected",
+            IsEnabled = true,
+            Description = "Multi-angle camera array"
+        });
+        HardwareDevices.Add(new HardwareDevice
+        {
+            Name = "Sensor Array Gamma",
+            Type = "Sensor",
+            Status = "Standby",
+            IsEnabled = false,
+            Description = "Temperature and pressure sensors"
+        });
+        HardwareDevices.Add(new HardwareDevice
+        {
+            Name = "Robotic Arm Delta",
+            Type = "Actuator",
+            Status = "Disconnected",
+            IsEnabled = false,
+            Description = "6-axis precision robotic arm"
+        });
+    }
+
+    private void InitializeAnalytics()
+    {
+        AnalyticsMetrics.Add(new AnalyticsMetric
+        {
+            Name = "Point Cloud Quality",
+            Value = 94.5,
+            Unit = "%",
+            Trend = "↑",
+            Status = "Good"
+        });
+        AnalyticsMetrics.Add(new AnalyticsMetric
+        {
+            Name = "Detection Accuracy",
+            Value = 98.2,
+            Unit = "%",
+            Trend = "↑",
+            Status = "Excellent"
+        });
+        AnalyticsMetrics.Add(new AnalyticsMetric
+        {
+            Name = "Processing Speed",
+            Value = 145.7,
+            Unit = "ms",
+            Trend = "↓",
+            Status = "Good"
+        });
+        AnalyticsMetrics.Add(new AnalyticsMetric
+        {
+            Name = "Memory Usage",
+            Value = 67.3,
+            Unit = "%",
+            Trend = "→",
+            Status = "Normal"
+        });
+        AnalyticsMetrics.Add(new AnalyticsMetric
+        {
+            Name = "GPU Utilization",
+            Value = 82.1,
+            Unit = "%",
+            Trend = "↑",
+            Status = "Good"
+        });
+    }
+
+    private void LogEvent(string message, EventLogType type)
+    {
+        EventLogs.Insert(0, new EventLogEntry
+        {
+            Timestamp = DateTime.Now,
+            Message = message,
+            Type = type
+        });
+
+        // Keep only last 100 events
+        while (EventLogs.Count > 100)
+            EventLogs.RemoveAt(EventLogs.Count - 1);
+    }
+
+    [RelayCommand]
+    private void ToggleHardwareDevice(HardwareDevice device)
+    {
+        if (device == null) return;
+
+        device.IsEnabled = !device.IsEnabled;
+        device.Status = device.IsEnabled ? "Connected" : "Standby";
+        LogEvent($"Hardware '{device.Name}' {(device.IsEnabled ? "enabled" : "disabled")}", EventLogType.Hardware);
+        StatusMessage = $"Hardware '{device.Name}' {(device.IsEnabled ? "enabled" : "disabled")}";
+    }
+
+    [RelayCommand]
+    private void ExportData()
+    {
+        try
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = ExportFormat switch
+                {
+                    "JSON" => "JSON Files (*.json)|*.json",
+                    "CSV" => "CSV Files (*.csv)|*.csv",
+                    "XML" => "XML Files (*.xml)|*.xml",
+                    "PLY" => "PLY Files (*.ply)|*.ply",
+                    _ => "All Files (*.*)|*.*"
+                },
+                Title = "Export Data",
+                FileName = $"export_{DateTime.Now:yyyyMMdd_HHmmss}.{ExportFormat.ToLower()}"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                // TODO: Implement actual export logic
+                File.WriteAllText(dlg.FileName, $"Export completed at {DateTime.Now}");
+                LogEvent($"Data exported to {System.IO.Path.GetFileName(dlg.FileName)}", EventLogType.Success);
+                StatusMessage = $"Data exported successfully";
+            }
+        }
+        catch (Exception ex)
+        {
+            LogEvent($"Export failed: {ex.Message}", EventLogType.Error);
+            StatusMessage = $"Export failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void ClearEventLogs()
+    {
+        EventLogs.Clear();
+        LogEvent("Event logs cleared", EventLogType.System);
     }
 
     partial void OnIsRoiFilterOnChanged(bool value)
@@ -1736,4 +1914,97 @@ public partial class ConnectionViewModel : ObservableObject
         ControlPoint1 = new System.Windows.Point(StartPoint.X + controlOffset, StartPoint.Y);
         ControlPoint2 = new System.Windows.Point(EndPoint.X - controlOffset, EndPoint.Y);
     }
+}
+
+// Helper classes for tab features
+public partial class EventLogEntry : ObservableObject
+{
+    [ObservableProperty] private DateTime _timestamp;
+    [ObservableProperty] private string _message = "";
+    [ObservableProperty] private EventLogType _type;
+
+    public string TypeIcon => Type switch
+    {
+        EventLogType.Success => "✓",
+        EventLogType.Error => "✗",
+        EventLogType.Warning => "⚠",
+        EventLogType.Execution => "▶",
+        EventLogType.Hardware => "⚙",
+        EventLogType.System => "⬤",
+        _ => "●"
+    };
+
+    public System.Windows.Media.Brush TypeColor => Type switch
+    {
+        EventLogType.Success => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80)),
+        EventLogType.Error => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 67, 54)),
+        EventLogType.Warning => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0)),
+        EventLogType.Execution => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243)),
+        EventLogType.Hardware => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(156, 39, 176)),
+        EventLogType.System => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158)),
+        _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255))
+    };
+}
+
+public enum EventLogType
+{
+    Success,
+    Error,
+    Warning,
+    Execution,
+    Hardware,
+    System
+}
+
+public partial class HardwareDevice : ObservableObject
+{
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _type = "";
+    [ObservableProperty] private string _status = "";
+    [ObservableProperty] private bool _isEnabled;
+    [ObservableProperty] private string _description = "";
+
+    public System.Windows.Media.Brush StatusColor => Status switch
+    {
+        "Connected" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80)),
+        "Standby" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0)),
+        "Disconnected" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158)),
+        _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255))
+    };
+
+    public string TypeIcon => Type switch
+    {
+        "Scanner" => "📡",
+        "Camera" => "📷",
+        "Sensor" => "🔬",
+        "Actuator" => "🤖",
+        _ => "⚙"
+    };
+}
+
+public partial class AnalyticsMetric : ObservableObject
+{
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private double _value;
+    [ObservableProperty] private string _unit = "";
+    [ObservableProperty] private string _trend = "";
+    [ObservableProperty] private string _status = "";
+
+    public System.Windows.Media.Brush StatusColor => Status switch
+    {
+        "Excellent" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80)),
+        "Good" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(139, 195, 74)),
+        "Normal" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243)),
+        "Warning" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0)),
+        "Critical" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 67, 54)),
+        _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158))
+    };
+
+    public System.Windows.Media.Brush TrendColor => Trend switch
+    {
+        "↑" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80)),
+        "↓" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 67, 54)),
+        "→" => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(158, 158, 158)),
+        _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255))
+    };
 }

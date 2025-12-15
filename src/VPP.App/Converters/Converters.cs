@@ -90,3 +90,52 @@ public class PassFailTextConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
+
+public class BooleanToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is bool b && b ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is Visibility v && v == Visibility.Visible;
+    }
+}
+
+public class IndexToBoolConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int currentIndex && parameter is string targetIndexStr && int.TryParse(targetIndexStr, out int targetIndex))
+        {
+            return currentIndex == targetIndex;
+        }
+        return false;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isChecked && isChecked && parameter is string indexStr && int.TryParse(indexStr, out int index))
+        {
+            return index;
+        }
+        return Binding.DoNothing;
+    }
+}
+
+public class IndexToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int currentIndex && parameter is string targetIndexStr && int.TryParse(targetIndexStr, out int targetIndex))
+        {
+            return currentIndex == targetIndex ? Visibility.Visible : Visibility.Collapsed;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
