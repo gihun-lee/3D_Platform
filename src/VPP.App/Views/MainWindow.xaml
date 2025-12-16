@@ -650,13 +650,53 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            
-                            <TextBlock Text="Final Result" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,30"/>
-                            
-                            <Border Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" 
+
+                            <!-- Execute Button -->
+                            <Button Grid.Row="0" Content="Execute"
+                                    Command="{Binding ExecuteAllCommand}"
+                                    Margin="20,20,20,10"
+                                    Height="50"
+                                    FontSize="18" FontWeight="Bold"
+                                    Foreground="White"
+                                    Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="#2196F3"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="8"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#1976D2"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Background" Value="#0D47A1"/>
+                                            </Trigger>
+                                            <DataTrigger Binding="{Binding IsExecuteAllRunning}" Value="True">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="Background" Value="#555"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
+                            <TextBlock Grid.Row="1" Text="Final Result" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,10,20,0"/>
+
+                            <Border Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center"
                                     Width="200" Height="200" CornerRadius="100">
                                 <Border.Style>
                                     <Style TargetType="Border">
@@ -671,16 +711,31 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                
-                                <TextBlock Text="{Binding OverallResultStatus}" 
+
+                                <TextBlock Text="{Binding OverallResultStatus}"
                                            FontSize="48" FontWeight="Bold" Foreground="White"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            
-                            <!-- Statistics or Info -->
-                            <StackPanel Grid.Row="2" Margin="20">
+
+                            <!-- Statistics and Execution Time Info -->
+                            <StackPanel Grid.Row="3" Margin="20">
                                 <TextBlock Text="Total Inspections:" Foreground="#AAA"/>
-                                <TextBlock Text="{Binding InspectionCards.Count}" Foreground="White" FontSize="18" Margin="0,0,0,10"/>
+                                <TextBlock Text="{Binding InspectionCards.Count}" Foreground="White" FontSize="18" Margin="0,0,0,15"/>
+
+                                <TextBlock Text="Total Execution Time:" Foreground="#AAA"/>
+                                <TextBlock Foreground="#4CAF50" FontSize="24" FontWeight="Bold" Margin="0,5,0,10">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{Binding TotalExecutionTime}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TotalExecutionTime}" Value="">
+                                                    <Setter Property="Text" Value="--"/>
+                                                    <Setter Property="Foreground" Value="#666"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                         </Grid>
                     </Border>

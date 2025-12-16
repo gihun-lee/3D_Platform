@@ -89,6 +89,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _overallResultStatus = "READY"; // READY, PASS, FAIL
     [ObservableProperty] private bool _isOverallPass;
 
+    // Execution time tracking
+    [ObservableProperty] private string _totalExecutionTime = "";
+    [ObservableProperty] private bool _isExecuteAllRunning;
+
     public MainViewModel()
     {
         _pluginService = new PluginService();
@@ -776,6 +780,133 @@ public partial class MainViewModel : ObservableObject
         if (int.TryParse(indexStr, out int index))
         {
             ActiveTabIndex = index;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExecuteAll()
+    {
+        if (IsExecuteAllRunning) return;
+        IsExecuteAllRunning = true;
+        TotalExecutionTime = "";
+        OverallResultStatus = "RUNNING...";
+
+        var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            // Step 1: Execute the graph to load point clouds and apply filters
+            StatusMessage = "Executing graph...";
+            await ExecuteGraph();
+
+            if (_lastExecutionContext == null)
+            {
+                StatusMessage = "Execution failed - no context available";
+                OverallResultStatus = "ERROR";
+                return;
+            }
+
+            // Step 2: Find all Circle Detection nodes and run detection on each
+            var circleDetectionNodes = Graph.Nodes
+                .Where(n => n.Name == "Circle Detection")
+                .ToList();
+
+            StatusMessage = $"Detecting circles ({circleDetectionNodes.Count} nodes)...";
+
+            foreach (var circleNodeModel in circleDetectionNodes)
+            {
+                var circleNode = circleNodeModel as VPP.Plugins.PointCloud.Nodes.CircleDetectionNode;
+                if (circleNode == null) continue;
+
+                // Build detection cloud from connected ROI Filter
+                var (detectionCloud, _) = BuildDetectionCloudForCircleNode(circleNode);
+                if (detectionCloud != null && detectionCloud.Points.Count >= 3)
+                {
+                    await Task.Run(() => circleNode.PerformDetection(_lastExecutionContext, detectionCloud, CancellationToken.None));
+                }
+            }
+
+            // Step 3: Find all Inspection nodes and run inspection on each
+            var inspectionNodes = Graph.Nodes
+                .Where(n => n.Name == "Spec Inspection")
+                .ToList();
+
+            StatusMessage = $"Performing inspections ({inspectionNodes.Count} nodes)...";
+
+            foreach (var inspectionNodeModel in inspectionNodes)
+            {
+                var inspectionNode = inspectionNodeModel as VPP.Plugins.PointCloud.Nodes.InspectionNode;
+                if (inspectionNode == null) continue;
+
+                await Task.Run(() => inspectionNode.PerformInspection(_lastExecutionContext));
+            }
+
+            // Step 4: Update all visualizations
+            UpdateVisualization();
+            UpdateDetectedCircleVisualization();
+            UpdateInspectionCards();
+
+            totalStopwatch.Stop();
+            TotalExecutionTime = FormatExecutionTime(totalStopwatch.Elapsed);
+
+            StatusMessage = $"Execute All completed - {circleDetectionNodes.Count} detections, {inspectionNodes.Count} inspections | Total: {TotalExecutionTime}";
+        }
+        catch (Exception ex)
+        {
+            totalStopwatch.Stop();
+            TotalExecutionTime = FormatExecutionTime(totalStopwatch.Elapsed);
+            StatusMessage = $"Execute All failed: {ex.Message}";
+            OverallResultStatus = "ERROR";
+        }
+        finally
+        {
+            IsExecuteAllRunning = false;
+        }
+    }
+
+    private (PointCloudData? cloud, ROI3D? roiUsed) BuildDetectionCloudForCircleNode(VPP.Plugins.PointCloud.Nodes.CircleDetectionNode circleNode)
+    {
+        if (_lastExecutionContext == null) return (null, null);
+
+        // Find the connected ROI Filter ID
+        var roiFilterNodeId = Graph.Connections
+            .Where(c => c.TargetNodeId == circleNode.Id)
+            .Select(c => c.SourceNodeId)
+            .FirstOrDefault(id =>
+            {
+                var node = Graph.Nodes.FirstOrDefault(n => n.Id == id);
+                return node?.Name == "ROI Filter";
+            });
+
+        if (roiFilterNodeId != null)
+        {
+            var filteredCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.FilteredCloudKey}_{roiFilterNodeId}");
+            var connectedRoi = _lastExecutionContext.Get<ROI3D>($"{VPP.Core.Models.ExecutionContext.ROIKey}_{roiFilterNodeId}");
+
+            if (filteredCloud != null && filteredCloud.Points.Count > 0)
+            {
+                return (filteredCloud, connectedRoi);
+            }
+        }
+
+        // Fallback: use global cloud
+        var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+        return (globalCloud, null);
+    }
+
+    private string FormatExecutionTime(TimeSpan elapsed)
+    {
+        if (elapsed.TotalMilliseconds < 1000)
+        {
+            return $"{elapsed.TotalMilliseconds:F0}ms";
+        }
+        else if (elapsed.TotalSeconds < 60)
+        {
+            return $"{elapsed.TotalSeconds:F2}s";
+        }
+        else
+        {
+            return $"{elapsed.Minutes}m {elapsed.Seconds:D2}s";
         }
     }
 
