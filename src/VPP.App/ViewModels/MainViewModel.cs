@@ -93,6 +93,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _totalExecutionTime = "";
     [ObservableProperty] private bool _isExecuteAllRunning;
 
+    // Flag to skip intermediate UI updates during batch execution
+    private bool _skipIntermediateUpdates = false;
+
     public MainViewModel()
     {
         _pluginService = new PluginService();
@@ -112,6 +115,10 @@ public partial class MainViewModel : ObservableObject
         _executionEngine.NodeExecuted += (s, e) =>
         {
             StatusMessage = e.Result?.Success == true ? $"Completed: {e.Node.Name}" : $"Failed: {e.Node.Name}";
+
+            // Skip intermediate UI updates during batch execution for performance
+            if (_skipIntermediateUpdates) return;
+
             // Real-time visualization update after each node execution
             UpdateVisualization();
             // Update circle visualization if circle detection was executed
@@ -791,6 +798,9 @@ public partial class MainViewModel : ObservableObject
         TotalExecutionTime = "";
         OverallResultStatus = "RUNNING...";
 
+        // Skip intermediate UI updates for faster execution
+        _skipIntermediateUpdates = true;
+
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
@@ -878,6 +888,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            _skipIntermediateUpdates = false;
             IsExecuteAllRunning = false;
         }
     }
