@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+465902073e8cbeda190240e10f42f02022786dbb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+299ef11de8e47cb6d31cb99150988101456da91e")]
 [assembly: System.Reflection.AssemblyProductAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VPP.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

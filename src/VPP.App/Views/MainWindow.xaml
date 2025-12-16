@@ -40,7 +40,9 @@
                 <Button Content="Save" Command="{Binding SaveWorkflowCommand}" Focusable="False"
                         Background="#4CAF50" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
                 <Button Content="Load" Command="{Binding LoadWorkflowCommand}" Focusable="False"
-                        Background="#00BCD4" Foreground="White" Padding="12,8"/>
+                        Background="#00BCD4" Foreground="White" Padding="12,8" Margin="0,0,10,0"/>
+                <Button Content="Clear" Command="{Binding ClearWorkflowCommand}" Focusable="False"
+                        Background="#F44336" Foreground="White" Padding="12,8"/>
             </StackPanel>
         </Border>
 

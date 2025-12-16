@@ -567,6 +567,32 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ClearWorkflow()
+    {
+        // Clear Graph and UI collections
+        Graph = new NodeGraph();
+        Nodes.Clear();
+        Connections.Clear();
+
+        // Reset execution context
+        _lastExecutionContext = null;
+
+        // Reset selection and state
+        SelectNode(null);
+
+        // Clear Scene (SelectNode skips this if context is null)
+        Scene.ClearPointCloud();
+        
+        // Reset Inspection/Detection results
+        InspectionPass = false;
+        InspectionResult = "";
+        DetectedRadius = 0;
+        DetectedCenter = new Media3D.Point3D(0, 0, 0);
+
+        StatusMessage = "Workflow cleared";
+    }
+
+    [RelayCommand]
     private void CreateDefaultWorkflow()
     {
         // Clear existing
@@ -1017,6 +1043,12 @@ public partial class MainViewModel : ObservableObject
     {
         if (nodeVm == null) return;
 
+        // If deleting the currently selected node, clear selection state first
+        if (SelectedNode == nodeVm)
+        {
+            SelectNode(null);
+        }
+
         // Remove connections referencing this node first
         var toRemove = Connections.Where(c =>
             c.Connection.SourceNodeId == nodeVm.Node.Id ||
@@ -1032,6 +1064,11 @@ public partial class MainViewModel : ObservableObject
         Nodes.Remove(nodeVm);
 
         StatusMessage = $"Deleted node: {nodeVm.Name}";
+
+        // Update visualizations to reflect deletion
+        UpdateVisualization();
+        UpdateAllRoiVisualizations();
+        UpdateDetectedCircleVisualization();
     }
 
     public void SelectNode(NodeViewModel? nodeVm)
