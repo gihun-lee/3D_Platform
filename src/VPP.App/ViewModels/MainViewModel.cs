@@ -20,6 +20,15 @@ using System.IO;
 
 namespace VPP.App.ViewModels;
 
+public partial class InspectionCardViewModel : ObservableObject
+{
+    [ObservableProperty] private string _nodeName = "";
+    [ObservableProperty] private string _resultMessage = "";
+    [ObservableProperty] private bool _isPass;
+    [ObservableProperty] private string _details = "";
+    [ObservableProperty] private DateTime _timestamp;
+}
+
 public partial class MainViewModel : ObservableObject
 {
     private readonly PluginService _pluginService;
@@ -74,6 +83,12 @@ public partial class MainViewModel : ObservableObject
     // Track if we should force filter visualization for downstream nodes
     private bool _forceFilterVisualization = false;
 
+    // Tab Navigation
+    [ObservableProperty] private int _activeTabIndex = 0; // 0: Main, 1: Inspection
+    [ObservableProperty] private ObservableCollection<InspectionCardViewModel> _inspectionCards = new();
+    [ObservableProperty] private string _overallResultStatus = "READY"; // READY, PASS, FAIL
+    [ObservableProperty] private bool _isOverallPass;
+
     public MainViewModel()
     {
         _pluginService = new PluginService();
@@ -99,6 +114,11 @@ public partial class MainViewModel : ObservableObject
             if (e.Node.Name == "Circle Detection")
             {
                 UpdateDetectedCircleVisualization();
+            }
+            // Update inspection cards if inspection was executed
+            if (e.Node.Name == "Spec Inspection")
+            {
+                UpdateInspectionCards();
             }
         };
     }
@@ -129,6 +149,7 @@ public partial class MainViewModel : ObservableObject
         Graph.AddNode(node);
         Nodes.Add(new NodeViewModel(node));
         StatusMessage = $"Added node: {node.Name}";
+        UpdateInspectionCards();
     }
 
     public async Task ExecuteGraph()
@@ -136,6 +157,7 @@ public partial class MainViewModel : ObservableObject
         if (IsExecuting) return;
         IsExecuting = true;
         StatusMessage = "Executing graph...";
+        OverallResultStatus = "RUNNING...";
 
         try
         {
@@ -147,16 +169,19 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "Execution completed successfully";
                 UpdateVisualization();
                 UpdateDetectedCircleVisualization();
+                UpdateInspectionCards();
             }
             else
             {
                 var failedNode = result.NodeResults.FirstOrDefault(r => !r.Value.Success);
                 StatusMessage = $"Execution failed: {failedNode.Value?.ErrorMessage}";
+                OverallResultStatus = "FAIL";
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
+            OverallResultStatus = "ERROR";
         }
         finally
         {
@@ -444,6 +469,7 @@ public partial class MainViewModel : ObservableObject
 
             // Update visualization to show inspection result
             UpdateInspectionVisualization();
+            UpdateInspectionCards();
 
             var result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{inspectionNode.Id}");
             if (result != null)
@@ -462,6 +488,84 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Inspection error: {ex.Message}";
+        }
+    }
+
+    private void UpdateInspectionCards()
+    {
+        var cards = new List<InspectionCardViewModel>();
+        bool allPass = true;
+        bool anyInspectionFound = false;
+
+        // Find all inspection nodes
+        var inspectionNodes = Graph.Nodes.Where(n => n.Name == "Spec Inspection").ToList();
+
+        foreach (var node in inspectionNodes)
+        {
+            anyInspectionFound = true;
+            
+            InspectionResult? result = null;
+            if (_lastExecutionContext != null)
+            {
+                result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{node.Id}");
+            }
+            
+            var card = new InspectionCardViewModel
+            {
+                NodeName = node.Name,
+                Timestamp = DateTime.Now
+            };
+
+            if (result != null)
+            {
+                card.IsPass = result.Pass;
+                card.ResultMessage = result.Message;
+                
+                if (result.Measurements != null && result.Measurements.Count > 0)
+                {
+                    var details = string.Join("\n", result.Measurements.Select(m => $"{m.Key}: {m.Value:F3}"));
+                    card.Details = details;
+                }
+                else
+                {
+                    card.Details = result.Pass ? "Within specifications" : "Out of specifications";
+                }
+
+                if (!result.Pass) allPass = false;
+            }
+            else
+            {
+                card.IsPass = false;
+                card.ResultMessage = "Not Executed";
+                card.Details = "No result available";
+                allPass = false;
+            }
+
+            cards.Add(card);
+        }
+
+        InspectionCards = new ObservableCollection<InspectionCardViewModel>(cards);
+
+        if (!anyInspectionFound)
+        {
+            OverallResultStatus = "READY";
+            IsOverallPass = false;
+        }
+        else
+        {
+            // Check if any results actually exist (not just "Not Executed")
+            bool anyResultExists = cards.Any(c => c.ResultMessage != "Not Executed");
+            
+            if (!anyResultExists)
+            {
+                 OverallResultStatus = "READY";
+                 IsOverallPass = false;
+            }
+            else
+            {
+                IsOverallPass = allPass;
+                OverallResultStatus = allPass ? "PASS" : "FAIL";
+            }
         }
     }
 
@@ -589,6 +693,7 @@ public partial class MainViewModel : ObservableObject
         DetectedRadius = 0;
         DetectedCenter = new Media3D.Point3D(0, 0, 0);
 
+        UpdateInspectionCards();
         StatusMessage = "Workflow cleared";
     }
 
@@ -661,7 +766,17 @@ public partial class MainViewModel : ObservableObject
             Connections.Add(new ConnectionViewModel(conn, sourceVm, targetVm));
         }
 
+        UpdateInspectionCards();
         StatusMessage = "Created default workflow - Circle Detection will use ROI filtered data only";
+    }
+
+    [RelayCommand]
+    private void SetActiveTab(string indexStr)
+    {
+        if (int.TryParse(indexStr, out int index))
+        {
+            ActiveTabIndex = index;
+        }
     }
 
     private void UpdateVisualization()
@@ -992,6 +1107,7 @@ public partial class MainViewModel : ObservableObject
         Graph.AddNode(node);
         Nodes.Add(new NodeViewModel(node));
         StatusMessage = $"Added node: {node.Name}";
+        UpdateInspectionCards();
     }
 
     public void CreateConnection(NodeViewModel sourceNodeVm, NodeViewModel targetNodeVm)
@@ -1069,6 +1185,7 @@ public partial class MainViewModel : ObservableObject
         UpdateVisualization();
         UpdateAllRoiVisualizations();
         UpdateDetectedCircleVisualization();
+        UpdateInspectionCards();
     }
 
     public void SelectNode(NodeViewModel? nodeVm)
