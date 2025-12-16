@@ -806,48 +806,66 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Step 2: Find all Circle Detection nodes and run detection on each
+            // Step 2: Find all Circle Detection nodes and run detection in parallel
             var circleDetectionNodes = Graph.Nodes
                 .Where(n => n.Name == "Circle Detection")
                 .ToList();
 
             StatusMessage = $"Detecting circles ({circleDetectionNodes.Count} nodes)...";
 
+            // Prepare all detection tasks
+            var detectionTasks = new List<Task>();
             foreach (var circleNodeModel in circleDetectionNodes)
             {
                 var circleNode = circleNodeModel as VPP.Plugins.PointCloud.Nodes.CircleDetectionNode;
                 if (circleNode == null) continue;
 
-                // Build detection cloud from connected ROI Filter
                 var (detectionCloud, _) = BuildDetectionCloudForCircleNode(circleNode);
                 if (detectionCloud != null && detectionCloud.Points.Count >= 3)
                 {
-                    await Task.Run(() => circleNode.PerformDetection(_lastExecutionContext, detectionCloud, CancellationToken.None));
+                    var cloud = detectionCloud; // Capture for closure
+                    var node = circleNode;
+                    detectionTasks.Add(Task.Run(() => node.PerformDetection(_lastExecutionContext, cloud, CancellationToken.None)));
                 }
             }
 
-            // Step 3: Find all Inspection nodes and run inspection on each
+            // Wait for all detections to complete
+            if (detectionTasks.Count > 0)
+            {
+                await Task.WhenAll(detectionTasks);
+            }
+
+            // Step 3: Find all Inspection nodes and run inspection in parallel
             var inspectionNodes = Graph.Nodes
                 .Where(n => n.Name == "Spec Inspection")
                 .ToList();
 
             StatusMessage = $"Performing inspections ({inspectionNodes.Count} nodes)...";
 
+            // Prepare all inspection tasks
+            var inspectionTasks = new List<Task>();
             foreach (var inspectionNodeModel in inspectionNodes)
             {
                 var inspectionNode = inspectionNodeModel as VPP.Plugins.PointCloud.Nodes.InspectionNode;
                 if (inspectionNode == null) continue;
 
-                await Task.Run(() => inspectionNode.PerformInspection(_lastExecutionContext));
+                var node = inspectionNode;
+                inspectionTasks.Add(Task.Run(() => node.PerformInspection(_lastExecutionContext)));
             }
 
-            // Step 4: Update all visualizations
+            // Wait for all inspections to complete
+            if (inspectionTasks.Count > 0)
+            {
+                await Task.WhenAll(inspectionTasks);
+            }
+
+            // Step 4: Update all visualizations (once at the end)
+            totalStopwatch.Stop();
+            TotalExecutionTime = FormatExecutionTime(totalStopwatch.Elapsed);
+
             UpdateVisualization();
             UpdateDetectedCircleVisualization();
             UpdateInspectionCards();
-
-            totalStopwatch.Stop();
-            TotalExecutionTime = FormatExecutionTime(totalStopwatch.Elapsed);
 
             StatusMessage = $"Execute All completed - {circleDetectionNodes.Count} detections, {inspectionNodes.Count} inspections | Total: {TotalExecutionTime}";
         }
