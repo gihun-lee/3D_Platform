@@ -52,6 +52,16 @@ public partial class SceneViewModel : ObservableObject
     // Constants
     private const float RoiCenterSphereRadius = 0.1f;
 
+    // Depth Visualization
+    [ObservableProperty] private bool _isDepthVisualizationEnabled;
+
+    // Store last clouds for re-rendering
+    private List<PointCloudData>? _lastClouds;
+
+    // Store ORIGINAL (imported) Z range - set once and never changes
+    private float? _originalMinZ;
+    private float? _originalMaxZ;
+
     public SceneViewModel()
     {
         _effectsManager = new DefaultEffectsManager();
@@ -64,6 +74,35 @@ public partial class SceneViewModel : ObservableObject
             NearPlaneDistance = 0.1,
             FarPlaneDistance = 100000
         };
+    }
+
+    // Handler for when depth visualization is toggled
+    partial void OnIsDepthVisualizationEnabledChanged(bool value)
+    {
+        // Re-render point cloud with new visualization mode
+        if (_lastClouds != null && _lastClouds.Count > 0)
+        {
+            UpdatePointCloud(_lastClouds, fitCamera: false);
+        }
+    }
+
+    /// <summary>
+    /// Set the ORIGINAL (imported) Z range - call this ONCE after importing data
+    /// This range will be used for depth coloring regardless of filtering/transformations
+    /// </summary>
+    public void SetOriginalDepthRange(float minZ, float maxZ)
+    {
+        _originalMinZ = minZ;
+        _originalMaxZ = maxZ;
+    }
+
+    /// <summary>
+    /// Clear the original depth range (e.g., when clearing the workflow)
+    /// </summary>
+    public void ClearOriginalDepthRange()
+    {
+        _originalMinZ = null;
+        _originalMaxZ = null;
     }
 
     public void UpdateDetectedCircles(IEnumerable<DetectedCircleData> circles)
@@ -118,16 +157,59 @@ public partial class SceneViewModel : ObservableObject
         if (clouds == null || clouds.Count == 0)
         {
             PointCloudGeometry = null;
+            _lastClouds = null;
             return;
         }
+
+        // Store clouds for re-rendering when depth visualization is toggled
+        _lastClouds = clouds;
 
         try
         {
             PointGeometry3D geometry;
-            if (clouds.Count == 1)
-                (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(clouds[0], enableLod: true);
+            
+            // Apply depth visualization if enabled
+            if (IsDepthVisualizationEnabled)
+            {
+                // Use ORIGINAL (imported) Z range if available, otherwise calculate from current clouds
+                float globalMinZ, globalMaxZ;
+                
+                if (_originalMinZ.HasValue && _originalMaxZ.HasValue)
+                {
+                    // Use the fixed ORIGINAL range from imported data
+                    globalMinZ = _originalMinZ.Value;
+                    globalMaxZ = _originalMaxZ.Value;
+                }
+                else
+                {
+                    // Fallback: calculate from current clouds (e.g., if range wasn't set)
+                    globalMinZ = float.MaxValue;
+                    globalMaxZ = float.MinValue;
+                    foreach (var cloud in clouds)
+                    {
+                        foreach (var p in cloud.Points)
+                        {
+                            globalMinZ = Math.Min(globalMinZ, p.Z);
+                            globalMaxZ = Math.Max(globalMaxZ, p.Z);
+                        }
+                    }
+                }
+
+                // Apply depth colors using the SAME global Z range for all clouds
+                var cloudsWithDepthColors = clouds.Select(c => ApplyDepthColors(c, globalMinZ, globalMaxZ)).ToList();
+                if (cloudsWithDepthColors.Count == 1)
+                    (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(cloudsWithDepthColors[0], enableLod: true);
+                else
+                    (geometry, _, _) = GpuPointCloudRenderer.CreateGeometryFromMultiple(cloudsWithDepthColors);
+            }
             else
-                (geometry, _, _) = GpuPointCloudRenderer.CreateGeometryFromMultiple(clouds);
+            {
+                // Normal rendering - keep original colors
+                if (clouds.Count == 1)
+                    (geometry, _, _) = GpuPointCloudRenderer.CreateGeometry(clouds[0], enableLod: true);
+                else
+                    (geometry, _, _) = GpuPointCloudRenderer.CreateGeometryFromMultiple(clouds);
+            }
 
             PointCloudGeometry = geometry;
             
@@ -145,9 +227,71 @@ public partial class SceneViewModel : ObservableObject
         }
     }
 
+    private PointCloudData ApplyDepthColors(PointCloudData cloud, float globalMinZ, float globalMaxZ)
+    {
+        var coloredCloud = new PointCloudData
+        {
+            Points = new List<System.Numerics.Vector3>(cloud.Points),
+            Normals = cloud.Normals != null ? new List<System.Numerics.Vector3>(cloud.Normals) : null,
+            Colors = new List<System.Numerics.Vector3>(cloud.Points.Count)
+        };
+
+        float range = globalMaxZ - globalMinZ;
+        if (range < 1e-6f) range = 1.0f; // Avoid division by zero
+
+        // Apply depth-based colors using GLOBAL Z range
+        foreach (var p in cloud.Points)
+        {
+            float normalized = (p.Z - globalMinZ) / range; // 0 = global min depth, 1 = global max depth
+            var color = GetDepthColor(normalized);
+            coloredCloud.Colors.Add(color);
+        }
+
+        coloredCloud.ComputeBoundingBox();
+        return coloredCloud;
+    }
+
+    private System.Numerics.Vector3 GetDepthColor(float t)
+    {
+        // Rainbow colormap: Blue (far) -> Cyan -> Green -> Yellow -> Orange -> Red (near)
+        // Inverted so that closer points (higher Z) are warmer colors
+        t = 1.0f - t; // Invert: now 0 = far (blue), 1 = near (red)
+
+        if (t < 0.167f) // Blue -> Cyan
+        {
+            float local = t / 0.167f;
+            return new System.Numerics.Vector3(0, local, 1);
+        }
+        else if (t < 0.333f) // Cyan -> Green
+        {
+            float local = (t - 0.167f) / 0.167f;
+            return new System.Numerics.Vector3(0, 1, 1 - local);
+        }
+        else if (t < 0.5f) // Green -> Yellow
+        {
+            float local = (t - 0.333f) / 0.167f;
+            return new System.Numerics.Vector3(local, 1, 0);
+        }
+        else if (t < 0.667f) // Yellow -> Orange
+        {
+            float local = (t - 0.5f) / 0.167f;
+            return new System.Numerics.Vector3(1, 1 - 0.5f * local, 0);
+        }
+        else if (t < 0.833f) // Orange -> Red
+        {
+            float local = (t - 0.667f) / 0.167f;
+            return new System.Numerics.Vector3(1, 0.5f - 0.5f * local, 0);
+        }
+        else // Dark Red
+        {
+            return new System.Numerics.Vector3(1, 0, 0);
+        }
+    }
+
     public void ClearPointCloud()
     {
         PointCloudGeometry = null;
+        ClearOriginalDepthRange();
     }
 
     public void UpdateDetectedCircle(PointCloudData? detectedCloud, CircleDetectionResult? circleResult)

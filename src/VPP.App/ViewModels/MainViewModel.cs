@@ -177,6 +177,11 @@ public partial class MainViewModel : ObservableObject
             if (result.Success)
             {
                 _lastExecutionContext = result.Context;
+                
+                // Calculate and store ORIGINAL Z range from imported data (once)
+                // This range will be used for depth visualization regardless of filtering
+                CalculateAndSetOriginalDepthRange();
+                
                 StatusMessage = "Execution completed successfully";
                 UpdateVisualization();
                 UpdateDetectedCircleVisualization();
@@ -197,6 +202,57 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsExecuting = false;
+        }
+    }
+
+    /// <summary>
+    /// Calculate the global Z range from ALL imported point clouds and set it in SceneViewModel.
+    /// This range will be used consistently for depth visualization.
+    /// </summary>
+    private void CalculateAndSetOriginalDepthRange()
+    {
+        if (_lastExecutionContext == null) return;
+
+        float globalMinZ = float.MaxValue;
+        float globalMaxZ = float.MinValue;
+        bool foundAnyData = false;
+
+        // Get all Import Point Cloud nodes
+        var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
+
+        foreach (var importNode in importNodes)
+        {
+            var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{importNode.Id}");
+            if (nodeCloud != null && nodeCloud.Points.Count > 0)
+            {
+                foundAnyData = true;
+                foreach (var p in nodeCloud.Points)
+                {
+                    globalMinZ = Math.Min(globalMinZ, p.Z);
+                    globalMaxZ = Math.Max(globalMaxZ, p.Z);
+                }
+            }
+        }
+
+        // If no import nodes found, try the global cloud (backward compatibility)
+        if (!foundAnyData)
+        {
+            var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+            if (globalCloud != null && globalCloud.Points.Count > 0)
+            {
+                foundAnyData = true;
+                foreach (var p in globalCloud.Points)
+                {
+                    globalMinZ = Math.Min(globalMinZ, p.Z);
+                    globalMaxZ = Math.Max(globalMaxZ, p.Z);
+                }
+            }
+        }
+
+        // Set the original depth range in Scene
+        if (foundAnyData)
+        {
+            Scene.SetOriginalDepthRange(globalMinZ, globalMaxZ);
         }
     }
 
@@ -695,7 +751,7 @@ public partial class MainViewModel : ObservableObject
         // Reset selection and state
         SelectNode(null);
 
-        // Clear Scene (SelectNode skips this if context is null)
+        // Clear Scene (also clears depth range)
         Scene.ClearPointCloud();
         
         // Reset Inspection/Detection results
