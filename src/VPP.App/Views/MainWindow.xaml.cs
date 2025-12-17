@@ -866,8 +866,8 @@ public partial class MainWindow : Window
 
     private void Viewport3D_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        // Handle camera panning when not in ROI mode OR when Space is pressed (override)
-        if (ViewModel == null || !ViewModel.IsRoiDrawingMode || ViewModel.SelectedRoiNode == null || Keyboard.IsKeyDown(Key.Space))
+        // Handle camera panning ONLY when Space is pressed
+        if (Keyboard.IsKeyDown(Key.Space))
         {
             // Start camera panning
             _isDraggingCamera = true;
@@ -886,6 +886,13 @@ public partial class MainWindow : Window
 
             Viewport3D.CaptureMouse();
             e.Handled = true;
+            return;
+        }
+
+        // ROI Drawing mode handling (when no node is selected or in ROI mode)
+        if (ViewModel == null || !ViewModel.IsRoiDrawingMode || ViewModel.SelectedRoiNode == null)
+        {
+            // Not in ROI mode and Space not pressed - do nothing (let default camera controller handle rotation)
             return;
         }
 
