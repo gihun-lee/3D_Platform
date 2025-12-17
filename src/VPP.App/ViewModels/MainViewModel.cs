@@ -58,6 +58,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _inspectionPass;
     [ObservableProperty] private double _detectedRadius;
     [ObservableProperty] private Media3D.Point3D _detectedCenter;
+    [ObservableProperty] private bool _isResultPanelVisible;
+
     [ObservableProperty] private string _nodeSearchText = "";
     [ObservableProperty] private ObservableCollection<string> _filteredNodes = new();
 
@@ -78,8 +80,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isInspectButtonVisible;
     private NodeViewModel? _selectedInspectionNode;
     
-    [ObservableProperty] private bool _isResultPanelVisible;
-
     // Track if we should force filter visualization for downstream nodes
     private bool _forceFilterVisualization = false;
 
@@ -535,7 +535,6 @@ public partial class MainViewModel : ObservableObject
             await Task.Run(() => inspectionNode.PerformInspection(_lastExecutionContext));
 
             // Update visualization to show inspection result
-            UpdateInspectionVisualization();
             UpdateInspectionCards();
 
             var result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{inspectionNode.Id}");
@@ -632,22 +631,6 @@ public partial class MainViewModel : ObservableObject
             {
                 IsOverallPass = allPass;
                 OverallResultStatus = allPass ? "PASS" : "FAIL";
-            }
-        }
-    }
-
-    private void UpdateInspectionVisualization()
-    {
-        if (_lastExecutionContext == null) return;
-
-        // If inspection node selected, show its specific result
-        if (_selectedInspectionNode != null)
-        {
-            var result = _lastExecutionContext.Get<InspectionResult>($"InspectionResult_{_selectedInspectionNode.Node.Id}");
-            if (result != null)
-            {
-                InspectionPass = result.Pass;
-                InspectionResult = result.Message;
             }
         }
     }
