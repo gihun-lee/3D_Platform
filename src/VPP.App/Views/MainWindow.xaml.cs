@@ -1490,4 +1490,9 @@ public partial class MainWindow : Window
     {
 
     }
+
+    private void ToggleButton_Checked(object sender, RoutedEventArgs e)
+    {
+
+    }
 }
