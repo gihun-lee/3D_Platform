@@ -181,9 +181,9 @@ public partial class MainViewModel : ObservableObject
                 // Calculate and store ORIGINAL Z range from imported data (once)
                 // This range will be used for depth visualization regardless of filtering
                 CalculateAndSetOriginalDepthRange();
-                
+
                 StatusMessage = "Execution completed successfully";
-                UpdateVisualization();
+                UpdateVisualization(fitCamera: true); // Fit camera only on initial load
                 UpdateDetectedCircleVisualization();
                 UpdateInspectionCards();
             }
@@ -1050,7 +1050,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void UpdateVisualization()
+    private void UpdateVisualization(bool fitCamera = false)
     {
         if (_lastExecutionContext == null) return;
 
@@ -1170,7 +1170,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            Scene.UpdatePointCloud(clouds, fitCamera: true);
+            Scene.UpdatePointCloud(clouds, fitCamera: fitCamera);
             
             // Calculate stats for status message
             int renderedPoints = Scene.PointCloudGeometry?.Positions?.Count ?? 0;
