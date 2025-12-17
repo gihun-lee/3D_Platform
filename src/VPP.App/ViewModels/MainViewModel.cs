@@ -844,15 +844,22 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            // Step 1: Execute the graph to load point clouds and apply filters
-            StatusMessage = "Executing graph...";
-            await ExecuteGraph();
-
+            // Step 1: Ensure we have a context with loaded data
             if (_lastExecutionContext == null)
             {
-                StatusMessage = "Execution failed - no context available";
-                OverallResultStatus = "ERROR";
-                return;
+                StatusMessage = "Executing graph (initial)...";
+                await ExecuteGraph();
+
+                if (_lastExecutionContext == null)
+                {
+                    StatusMessage = "Execution failed - no context available";
+                    OverallResultStatus = "ERROR";
+                    return;
+                }
+            }
+            else
+            {
+                StatusMessage = "Using existing data (skipping Import)...";
             }
 
             // Step 2: Find all Circle Detection nodes and run detection in parallel
@@ -869,10 +876,13 @@ public partial class MainViewModel : ObservableObject
                 var circleNode = circleNodeModel as VPP.Plugins.PointCloud.Nodes.CircleDetectionNode;
                 if (circleNode == null) continue;
 
-                var (detectionCloud, _) = BuildDetectionCloudForCircleNode(circleNode);
+                // MANUALLY build fresh detection cloud (apply ROI filter on raw data)
+                // This ensures we use current ROI parameters without re-running the whole graph
+                var (detectionCloud, _) = BuildFreshDetectionCloud(circleNode);
+                
                 if (detectionCloud != null && detectionCloud.Points.Count >= 3)
                 {
-                    var cloud = detectionCloud; // Capture for closure
+                    var cloud = detectionCloud; 
                     var node = circleNode;
                     detectionTasks.Add(Task.Run(() => node.PerformDetection(_lastExecutionContext, cloud, CancellationToken.None)));
                 }
@@ -915,6 +925,7 @@ public partial class MainViewModel : ObservableObject
             UpdateVisualization();
             UpdateDetectedCircleVisualization();
             UpdateInspectionCards();
+            UpdateInspectionResults();
 
             StatusMessage = $"Execute All completed - {circleDetectionNodes.Count} detections, {inspectionNodes.Count} inspections | Total: {TotalExecutionTime}";
         }
@@ -930,6 +941,67 @@ public partial class MainViewModel : ObservableObject
             _skipIntermediateUpdates = false;
             IsExecuteAllRunning = false;
         }
+    }
+
+    private (PointCloudData? cloud, ROI3D? roiUsed) BuildFreshDetectionCloud(VPP.Plugins.PointCloud.Nodes.CircleDetectionNode circleNode)
+    {
+        if (_lastExecutionContext == null) return (null, null);
+
+        // 1. Get Raw Clouds (Global or from Import nodes)
+        var clouds = new List<PointCloudData>();
+        
+        var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
+        foreach (var importNode in importNodes)
+        {
+             var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{importNode.Id}");
+             if (nodeCloud != null && nodeCloud.Points.Count > 0) clouds.Add(nodeCloud);
+        }
+        
+        // Also check global cloud if no import nodes found or they are empty
+        if (clouds.Count == 0)
+        {
+             var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+             if (globalCloud != null && globalCloud.Points.Count > 0) clouds.Add(globalCloud);
+        }
+
+        // 2. Find connected ROI Filter -> ROI Draw to get parameters
+        ROI3D? roi = null;
+        var roiFilterNode = Graph.Connections
+            .Where(c => c.TargetNodeId == circleNode.Id)
+            .Select(c => Graph.Nodes.FirstOrDefault(n => n.Id == c.SourceNodeId && n.Name == "ROI Filter"))
+            .FirstOrDefault();
+
+        if (roiFilterNode != null)
+        {
+            var roiFilterNodeVm = Nodes.FirstOrDefault(n => n.Node.Id == roiFilterNode.Id);
+            if (roiFilterNodeVm != null)
+            {
+                roi = BuildRoiFromConnectedDrawNode(roiFilterNodeVm);
+            }
+        }
+
+        // 3. Filter
+        var cloudsToUse = roi != null ? clouds.Select(c => FilterCloudByRoi(c, roi)).ToList() : clouds;
+        
+        // 4. Merge
+        var merged = new PointCloudData();
+        foreach (var c in cloudsToUse)
+        {
+            if (c == null || c.Points.Count == 0) continue;
+            merged.Points.AddRange(c.Points);
+            if (c.Colors != null)
+            {
+                merged.Colors ??= new List<System.Numerics.Vector3>();
+                merged.Colors.AddRange(c.Colors);
+            }
+            if (c.Normals != null)
+            {
+                merged.Normals ??= new List<System.Numerics.Vector3>();
+                merged.Normals.AddRange(c.Normals);
+            }
+        }
+        merged.ComputeBoundingBox();
+        return (merged.Points.Count > 0 ? merged : null, roi);
     }
 
     private (PointCloudData? cloud, ROI3D? roiUsed) BuildDetectionCloudForCircleNode(VPP.Plugins.PointCloud.Nodes.CircleDetectionNode circleNode)
