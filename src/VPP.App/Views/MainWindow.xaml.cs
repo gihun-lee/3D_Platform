@@ -1070,29 +1070,17 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (!_roiFirstPoint.HasValue)
-            {
-                // First click - set center
-                _roiFirstPoint = hitPoint.Value;
-                _isDrawingRoi = true;
-                if (ViewModel != null)
-                    ViewModel.StatusMessage = $"Center set at ({hitPoint.Value.X:F2}, {hitPoint.Value.Y:F2}, {hitPoint.Value.Z:F2}) - Click second point";
-            }
-            else
-            {
-                // Second click - set size/radius
-                var center = _roiFirstPoint.Value;
-                var secondPoint = hitPoint.Value;
+            // Single click placement with default size
+            UpdateRoiToDefault(hitPoint.Value);
+            
+            // Reset drawing state
+            _roiFirstPoint = null;
+            _isDrawingRoi = false;
 
-                UpdateRoiParameters(center, secondPoint);
+            if (ViewModel != null)
+                ViewModel.StatusMessage = $"ROI placed at ({hitPoint.Value.X:F2}, {hitPoint.Value.Y:F2}, {hitPoint.Value.Z:F2}) - Drag to resize";
 
-                _isDrawingRoi = false;
-                _roiFirstPoint = null;
-                if (ViewModel != null)
-                    ViewModel.StatusMessage = "ROI updated - Select another shape or background to exit drawing mode";
-
-                e.Handled = true;
-            }
+            e.Handled = true;
         }
     }
 
@@ -1106,83 +1094,72 @@ public partial class MainWindow : Window
 
     private System.Numerics.Vector3? GetHitPoint(System.Windows.Point mousePosition)
     {
-        if (ViewModel?.Scene.PointCloudGeometry?.Positions == null || ViewModel.Scene.PointCloudGeometry.Positions.Count == 0)
-            return null;
-
-        // Use camera ray casting to find nearest point
-        var viewport = Viewport3D;
-        var camera = ViewModel.Scene.Camera;
-
-        if (camera is PerspectiveCamera perspCam)
+        // Use HelixToolkit's built-in hit testing for performance and accuracy
+        // This avoids iterating millions of points in C# which causes UI lag
+        var hits = Viewport3D.FindHits(mousePosition);
+        
+        if (hits != null && hits.Count > 0)
         {
-            // Convert 2D screen point to 3D world ray
-            var ray = GetRay(perspCam, mousePosition, viewport.ActualWidth, viewport.ActualHeight);
-
-            // Find closest point cloud point to ray
-            var positions = ViewModel.Scene.PointCloudGeometry.Positions;
-            float minDist = float.MaxValue;
-            System.Numerics.Vector3? closestPoint = null;
-
-            foreach (var p in positions)
+            // Find the closest hit that belongs to the point cloud
+            // Note: FindHits usually returns results sorted by distance, but we verify
+            foreach (var hit in hits.OrderBy(h => h.Distance))
             {
-                var point = new System.Numerics.Vector3(p.X, p.Y, p.Z);
-                var dist = DistanceToRay(point, ray.origin, ray.direction);
-                if (dist < minDist)
+                if (hit.ModelHit == PointCloudVisual)
                 {
-                    minDist = dist;
-                    closestPoint = point;
+                    // Convert SharpDX.Vector3 to System.Numerics.Vector3
+                    return new System.Numerics.Vector3(hit.PointHit.X, hit.PointHit.Y, hit.PointHit.Z);
                 }
             }
-
-            // Only return if reasonably close
-            if (minDist < 50f)
-                return closestPoint;
         }
 
         return null;
     }
 
-    private (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) GetRay(PerspectiveCamera camera, System.Windows.Point screenPoint, double width, double height)
+    // Removed manual ray casting methods (GetRay, DistanceToRay) as they are no longer needed
+
+    private void UpdateRoiToDefault(System.Numerics.Vector3 center)
     {
-        var origin = new System.Numerics.Vector3(
-            (float)camera.Position.X,
-            (float)camera.Position.Y,
-            (float)camera.Position.Z);
+        if (ViewModel?.SelectedRoiNode?.Node == null) return;
 
-        // Simple approximation - convert screen point to world direction
-        var lookDir = new System.Numerics.Vector3(
-            (float)camera.LookDirection.X,
-            (float)camera.LookDirection.Y,
-            (float)camera.LookDirection.Z);
+        var node = ViewModel.SelectedRoiNode.Node;
 
-        var upDir = new System.Numerics.Vector3(
-            (float)camera.UpDirection.X,
-            (float)camera.UpDirection.Y,
-            (float)camera.UpDirection.Z);
+        // Set Center
+        var centerXParam = node.Parameters.FirstOrDefault(p => p.Name == "CenterX");
+        var centerYParam = node.Parameters.FirstOrDefault(p => p.Name == "CenterY");
+        var centerZParam = node.Parameters.FirstOrDefault(p => p.Name == "CenterZ");
+        if (centerXParam != null) centerXParam.Value = center.X;
+        if (centerYParam != null) centerYParam.Value = center.Y;
+        if (centerZParam != null) centerZParam.Value = center.Z;
 
-        var rightDir = System.Numerics.Vector3.Cross(lookDir, upDir);
-        rightDir = System.Numerics.Vector3.Normalize(rightDir);
-        upDir = System.Numerics.Vector3.Cross(rightDir, lookDir);
-        upDir = System.Numerics.Vector3.Normalize(upDir);
+        // Reset Size to Default
+        float defaultSize = 20.0f;
+        var shapeParam = node.Parameters.FirstOrDefault(p => p.Name == "Shape");
+        var shapeStr = shapeParam?.Value as string ?? "Box";
 
-        var fov = camera.FieldOfView * Math.PI / 180.0;
-        var aspectRatio = width / height;
+        if (shapeStr == "Box")
+        {
+            var sizeXParam = node.Parameters.FirstOrDefault(p => p.Name == "SizeX");
+            var sizeYParam = node.Parameters.FirstOrDefault(p => p.Name == "SizeY");
+            var sizeZParam = node.Parameters.FirstOrDefault(p => p.Name == "SizeZ");
+            if (sizeXParam != null) sizeXParam.Value = defaultSize;
+            if (sizeYParam != null) sizeYParam.Value = defaultSize;
+            if (sizeZParam != null) sizeZParam.Value = defaultSize;
+        }
+        else if (shapeStr == "Cylinder")
+        {
+            var radiusParam = node.Parameters.FirstOrDefault(p => p.Name == "Radius");
+            var sizeYParam = node.Parameters.FirstOrDefault(p => p.Name == "SizeY");
+            if (radiusParam != null) radiusParam.Value = defaultSize / 2;
+            if (sizeYParam != null) sizeYParam.Value = defaultSize;
+        }
+        else if (shapeStr == "Sphere")
+        {
+            var radiusParam = node.Parameters.FirstOrDefault(p => p.Name == "Radius");
+            if (radiusParam != null) radiusParam.Value = defaultSize / 2;
+        }
 
-        var dx = (float)((screenPoint.X / width - 0.5) * 2 * Math.Tan(fov / 2) * aspectRatio);
-        var dy = (float)((0.5 - screenPoint.Y / height) * 2 * Math.Tan(fov / 2));
-
-        var direction = lookDir + rightDir * dx + upDir * dy;
-        direction = System.Numerics.Vector3.Normalize(direction);
-
-        return (origin, direction);
-    }
-
-    private float DistanceToRay(System.Numerics.Vector3 point, System.Numerics.Vector3 rayOrigin, System.Numerics.Vector3 rayDirection)
-    {
-        var toPoint = point - rayOrigin;
-        var projection = System.Numerics.Vector3.Dot(toPoint, rayDirection);
-        var closestPointOnRay = rayOrigin + rayDirection * projection;
-        return System.Numerics.Vector3.Distance(point, closestPointOnRay);
+        // Update visualization
+        ViewModel.UpdateRoiFromParameters(ViewModel.SelectedRoiNode);
     }
 
     private void UpdateRoiParameters(System.Numerics.Vector3 center, System.Numerics.Vector3 secondPoint)
