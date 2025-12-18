@@ -61,6 +61,9 @@ public partial class SceneViewModel : ObservableObject
     // Store ORIGINAL (imported) Z range - set once and never changes
     private float? _originalMinZ;
     private float? _originalMaxZ;
+    
+    // Cache for depth color arrays to reduce allocations
+    private List<System.Numerics.Vector3>? _depthColorCache;
 
     public SceneViewModel()
     {
@@ -229,23 +232,35 @@ public partial class SceneViewModel : ObservableObject
 
     private PointCloudData ApplyDepthColors(PointCloudData cloud, float globalMinZ, float globalMaxZ)
     {
-        var coloredCloud = new PointCloudData
+        var pointCount = cloud.Points.Count;
+        
+        // Reuse or create color cache (reduces GC pressure)
+        if (_depthColorCache == null || _depthColorCache.Capacity < pointCount)
         {
-            Points = new List<System.Numerics.Vector3>(cloud.Points),
-            Normals = cloud.Normals != null ? new List<System.Numerics.Vector3>(cloud.Normals) : null,
-            Colors = new List<System.Numerics.Vector3>(cloud.Points.Count)
-        };
+            _depthColorCache = new List<System.Numerics.Vector3>(pointCount);
+        }
+        else
+        {
+            _depthColorCache.Clear();
+        }
 
         float range = globalMaxZ - globalMinZ;
         if (range < 1e-6f) range = 1.0f; // Avoid division by zero
 
-        // Apply depth-based colors using GLOBAL Z range
-        foreach (var p in cloud.Points)
+        // Apply depth-based colors using GLOBAL Z range (optimized loop)
+        for (int i = 0; i < pointCount; i++)
         {
+            var p = cloud.Points[i];
             float normalized = (p.Z - globalMinZ) / range; // 0 = global min depth, 1 = global max depth
-            var color = GetDepthColor(normalized);
-            coloredCloud.Colors.Add(color);
+            _depthColorCache.Add(GetDepthColor(normalized));
         }
+
+        var coloredCloud = new PointCloudData
+        {
+            Points = new List<System.Numerics.Vector3>(cloud.Points),
+            Normals = cloud.Normals != null ? new List<System.Numerics.Vector3>(cloud.Normals) : null,
+            Colors = _depthColorCache
+        };
 
         coloredCloud.ComputeBoundingBox();
         return coloredCloud;
@@ -292,6 +307,7 @@ public partial class SceneViewModel : ObservableObject
     {
         PointCloudGeometry = null;
         ClearOriginalDepthRange();
+        _depthColorCache = null; // Release cached memory
     }
 
     public void UpdateDetectedCircle(PointCloudData? detectedCloud, CircleDetectionResult? circleResult)

@@ -70,6 +70,7 @@ public class GpuPointCloudRenderer
 
     /// <summary>
     /// Creates geometry from multiple point clouds with automatic merging
+    /// OPTIMIZED: Pre-allocates memory to reduce GC pressure
     /// </summary>
     public static (PointGeometry3D geometry, int renderedPoints, string lodInfo) CreateGeometryFromMultiple(
         IEnumerable<PointCloudData> clouds,
@@ -81,9 +82,12 @@ public class GpuPointCloudRenderer
             throw new ArgumentException("No valid point clouds provided", nameof(clouds));
         }
 
-        // Merge clouds
-        var mergedPoints = new List<System.Numerics.Vector3>();
-        var mergedColors = new List<System.Numerics.Vector3>();
+        // Calculate total capacity upfront to avoid reallocation
+        int totalPoints = cloudList.Sum(c => c.Points.Count);
+        
+        // Pre-allocate with exact capacity (avoids internal List resizing)
+        var mergedPoints = new List<System.Numerics.Vector3>(totalPoints);
+        var mergedColors = new List<System.Numerics.Vector3>(totalPoints);
         bool hasColors = true;
 
         foreach (var cloud in cloudList)
