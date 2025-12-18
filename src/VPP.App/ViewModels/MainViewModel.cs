@@ -940,7 +940,22 @@ public partial class MainViewModel : ObservableObject
         {
             _skipIntermediateUpdates = false;
             IsExecuteAllRunning = false;
+            
+            // Request focus restoration to ensure keyboard input (Space bar panning) works
+            // This will be handled in the View layer via event or direct focus management
+            RequestFocusRestoration();
         }
+    }
+
+    /// <summary>
+    /// Signals that focus should be restored to the main window/viewports.
+    /// This is needed after long operations (like ExecuteAll) to ensure keyboard input works.
+    /// </summary>
+    public event EventHandler? FocusRestorationRequested;
+    
+    private void RequestFocusRestoration()
+    {
+        FocusRestorationRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private (PointCloudData? cloud, ROI3D? roiUsed) BuildFreshDetectionCloud(VPP.Plugins.PointCloud.Nodes.CircleDetectionNode circleNode)

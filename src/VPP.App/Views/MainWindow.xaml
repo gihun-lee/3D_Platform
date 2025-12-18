@@ -79,7 +79,7 @@
             <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#333" BorderThickness="0,0,1,0">
                 <StackPanel>
                     <!-- Main Tab -->
-                    <Button Command="{Binding SetActiveTabCommand}" CommandParameter="0" Style="{StaticResource MenuButtonStyle}">
+                    <Button Command="{Binding SetActiveTabCommand}" CommandParameter="0" Style="{StaticResource MenuButtonStyle}" Focusable="False">
                         <StackPanel>
                             <TextBlock Text="Main" FontSize="12" FontWeight="Bold"/>
                         </StackPanel>
@@ -96,7 +96,7 @@
                     </Button>
 
                     <!-- Inspection Tab -->
-                    <Button Command="{Binding SetActiveTabCommand}" CommandParameter="1" Style="{StaticResource MenuButtonStyle}">
+                    <Button Command="{Binding SetActiveTabCommand}" CommandParameter="1" Style="{StaticResource MenuButtonStyle}" Focusable="False">
                         <StackPanel>
                             <TextBlock Text="Inspection" FontSize="12" FontWeight="Bold"/>
                         </StackPanel>
@@ -741,7 +741,8 @@
                                     Height="50"
                                     FontSize="18" FontWeight="Bold"
                                     Foreground="White"
-                                    Cursor="Hand">
+                                    Cursor="Hand"
+                                    Focusable="False">
                                 <Button.Style>
                                     <Style TargetType="Button">
                                         <Setter Property="Background" Value="#2196F3"/>

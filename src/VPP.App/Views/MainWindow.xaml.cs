@@ -80,6 +80,46 @@ public partial class MainWindow : Window
         // Add keyboard event handler
         this.KeyDown += MainWindow_KeyDown;
         this.KeyUp += MainWindow_KeyUp;
+        
+        // Subscribe to DataContext changes to handle ViewModel events
+        this.DataContextChanged += MainWindow_DataContextChanged;
+    }
+
+    private void MainWindow_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        // Unsubscribe from old ViewModel if exists
+        if (e.OldValue is MainViewModel oldVm)
+        {
+            oldVm.FocusRestorationRequested -= OnFocusRestorationRequested;
+        }
+
+        // Subscribe to new ViewModel if exists
+        if (e.NewValue is MainViewModel newVm)
+        {
+            newVm.FocusRestorationRequested += OnFocusRestorationRequested;
+        }
+    }
+
+    private void OnFocusRestorationRequested(object? sender, EventArgs e)
+    {
+        // Restore focus to the main window to ensure keyboard input (Space bar panning) works
+        // This is called after operations like ExecuteAll that might cause focus loss
+        Dispatcher.InvokeAsync(() =>
+        {
+            // Clear any existing focus first
+            Keyboard.ClearFocus();
+            
+            // Focus the main window
+            this.Focus();
+            Keyboard.Focus(this);
+            
+            // Ensure the viewports are ready to receive input but not focused by default
+            Viewport3D.Focusable = true;
+            NodeGraphViewport.Focusable = true;
+            
+            // Force the main window to be the active element
+            FocusManager.SetFocusedElement(this, this);
+        }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     private void Viewport3D_PreviewKeyDown(object sender, KeyEventArgs e)
