@@ -566,24 +566,66 @@
                                     </ScrollViewer>
 
                                     <!-- Result Panel -->
-                                    <Border Grid.Row="2" Background="#2D2D2D" Padding="10" MaxHeight="200">
+                                    <Border Grid.Row="2" Background="#2D2D2D" Padding="10">
                                         <StackPanel>
                                             <TextBlock Text="Result" FontWeight="Bold" Foreground="White" Margin="0,0,0,5"/>
-                                            <TextBlock Text="{Binding MeasurementStatusMessage}"
-                                                       Foreground="#4CAF50"
-                                                       TextWrapping="Wrap"
-                                                       FontFamily="Consolas"
-                                                       FontSize="11"/>
-                                            <Button Content="Clear History"
-                                                    Command="{Binding ClearMeasurementHistoryCommand}"
-                                                    Margin="0,10,0,0"
-                                                    Padding="8,4"
-                                                    Background="#555"
-                                                    Foreground="White"
-                                                    BorderThickness="0"
-                                                    Cursor="Hand"
-                                                    Focusable="False"
-                                                    Visibility="{Binding MeasurementHistory.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                            <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto">
+                                                <TextBlock Text="{Binding MeasurementStatusMessage}"
+                                                           Foreground="#4CAF50"
+                                                           TextWrapping="Wrap"
+                                                           FontFamily="Consolas"
+                                                           FontSize="11"/>
+                                            </ScrollViewer>
+
+                                            <!-- Action Buttons -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                                <Button Content="Clear"
+                                                        Command="{Binding ClearCurrentMeasurementCommand}"
+                                                        Padding="10,5"
+                                                        Margin="0,0,5,0"
+                                                        Background="#E53935"
+                                                        Foreground="White"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand"
+                                                        Focusable="False"
+                                                        ToolTip="Clear current measurement and visualization"/>
+                                                <Button Content="Clear All"
+                                                        Command="{Binding ClearMeasurementHistoryCommand}"
+                                                        Padding="10,5"
+                                                        Background="#555"
+                                                        Foreground="White"
+                                                        BorderThickness="0"
+                                                        Cursor="Hand"
+                                                        Focusable="False"
+                                                        ToolTip="Clear measurement history"
+                                                        Visibility="{Binding MeasurementHistory.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                            </StackPanel>
+
+                                            <!-- History Section -->
+                                            <Border Margin="0,10,0,0"
+                                                    Visibility="{Binding MeasurementHistory.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <TextBlock Text="History" FontWeight="SemiBold" Foreground="#888" FontSize="10" Margin="0,0,0,5"/>
+                                                    <ItemsControl ItemsSource="{Binding MeasurementHistory}" MaxHeight="150">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Background="#333" Margin="0,2" Padding="6,4" CornerRadius="3">
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{Binding Name}" Foreground="#2196F3" FontWeight="SemiBold" FontSize="10"/>
+                                                                        <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}"
+                                                                                   Foreground="#666" FontSize="9"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
@@ -636,6 +678,8 @@
                                     <helix:PhongMaterial DiffuseColor="Red"/>
                                 </helix:MeshGeometryModel3D.Material>
                             </helix:MeshGeometryModel3D>
+                            <!-- Measurement Visualization Models -->
+                            <helix:GroupModel3D ItemsSource="{Binding Scene.MeasurementModels}"/>
                             </helix:Viewport3DX>
 
                             <!-- Depth Color Bar -->
