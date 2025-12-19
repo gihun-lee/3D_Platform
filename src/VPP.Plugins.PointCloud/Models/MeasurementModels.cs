@@ -115,14 +115,23 @@ public abstract class MeasurementResult
     public string ErrorMessage { get; set; } = "";
 
     /// <summary>
-    /// Get formatted result with default mm unit
+    /// Get formatted result with default mm unit (scale = 1)
     /// </summary>
     public abstract string GetFormattedResult();
 
     /// <summary>
-    /// Get formatted result with specified unit
+    /// Get formatted result with specified unit enum
     /// </summary>
     public virtual string GetFormattedResult(MeasurementUnit unit)
+    {
+        return GetFormattedResult(MeasurementUnitHelper.GetMultiplier(unit));
+    }
+
+    /// <summary>
+    /// Get formatted result with custom scale (e.g., 0.001, 1, 10)
+    /// Scale represents: 1mm = scale units
+    /// </summary>
+    public virtual string GetFormattedResult(float scale)
     {
         return GetFormattedResult(); // Default implementation
     }
@@ -156,14 +165,12 @@ public class DistanceMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Total: {TotalDistance * m:F3}{s}\nX: {DistanceX * m:F3}{s}\nY: {DistanceY * m:F3}{s}\nZ: {DistanceZ * m:F3}{s}";
+        return $"Total: {TotalDistance * scale:F3}mm\nX: {DistanceX * scale:F3}mm\nY: {DistanceY * scale:F3}mm\nZ: {DistanceZ * scale:F3}mm";
     }
 }
 
@@ -211,14 +218,12 @@ public class HeightMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Axis: {Axis}\nMin: {MinHeight * m:F3}{s}\nMax: {MaxHeight * m:F3}{s}\nRange: {Range * m:F3}{s}\nMean: {Mean * m:F3}{s}\nStdDev: {StandardDeviation * m:F3}{s}\nPoints: {PointCount:N0}";
+        return $"Axis: {Axis}\nMin: {MinHeight * scale:F3}mm\nMax: {MaxHeight * scale:F3}mm\nRange: {Range * scale:F3}mm\nMean: {Mean * scale:F3}mm\nStdDev: {StandardDeviation * scale:F3}mm\nPoints: {PointCount:N0}";
     }
 }
 
@@ -242,16 +247,13 @@ public class BoundingBoxMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        var vm = MeasurementUnitHelper.GetVolumeMultiplier(unit);
-        var vs = MeasurementUnitHelper.GetVolumeSuffix(unit);
-        return $"Size: {Size.X * m:F3} x {Size.Y * m:F3} x {Size.Z * m:F3} {s}\nVolume: {Volume * vm:F3} {vs}\nDiagonal: {DiagonalLength * m:F3}{s}\nCenter: ({Center.X * m:F2}, {Center.Y * m:F2}, {Center.Z * m:F2})";
+        var s3 = scale * scale * scale; // volume scale
+        return $"Size: {Size.X * scale:F3} x {Size.Y * scale:F3} x {Size.Z * scale:F3} mm\nVolume: {Volume * s3:F3} mm³\nDiagonal: {DiagonalLength * scale:F3}mm\nCenter: ({Center.X * scale:F2}, {Center.Y * scale:F2}, {Center.Z * scale:F2})";
     }
 }
 
@@ -271,14 +273,12 @@ public class CentroidMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Centroid: ({Centroid.X * m:F3}, {Centroid.Y * m:F3}, {Centroid.Z * m:F3}) {s}\nPoint Count: {PointCount:N0}";
+        return $"Centroid: ({Centroid.X * scale:F3}, {Centroid.Y * scale:F3}, {Centroid.Z * scale:F3}) mm\nPoint Count: {PointCount:N0}";
     }
 }
 
@@ -300,18 +300,13 @@ public class PointDensityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        var vm = MeasurementUnitHelper.GetVolumeMultiplier(unit);
-        var vs = MeasurementUnitHelper.GetVolumeSuffix(unit);
-        // Density needs inverse volume multiplier (pts/mm³ → pts/cm³ means divide by 0.001)
-        var densityValue = Density / vm;
-        return $"Density: {densityValue:F4} pts/{vs}\nAvg Spacing: {AverageSpacing * m:F3}{s}\nPoints: {PointCount:N0}\nVolume: {BoundingVolume * vm:F3} {vs}";
+        var s3 = scale * scale * scale; // volume scale
+        return $"Density: {Density / s3:F4} pts/mm³\nAvg Spacing: {AverageSpacing * scale:F3}mm\nPoints: {PointCount:N0}\nVolume: {BoundingVolume * s3:F3} mm³";
     }
 }
 
@@ -332,14 +327,13 @@ public class SurfaceAreaMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var am = MeasurementUnitHelper.GetAreaMultiplier(unit);
-        var as_ = MeasurementUnitHelper.GetAreaSuffix(unit);
-        return $"Surface Area: {SurfaceArea * am:F3} {as_}\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea * am:F3} {as_}";
+        var s2 = scale * scale; // area scale
+        return $"Surface Area: {SurfaceArea * s2:F3} mm²\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea * s2:F3} mm²";
     }
 }
 
@@ -362,14 +356,12 @@ public class PointToPlaneMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Distance: {Distance * m:F3}{s}\nPoint: ({Point.X * m:F2}, {Point.Y * m:F2}, {Point.Z * m:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
+        return $"Distance: {Distance * scale:F3}mm\nPoint: ({Point.X * scale:F2}, {Point.Y * scale:F2}, {Point.Z * scale:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
     }
 }
 
@@ -395,14 +387,12 @@ public class FlatnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Flatness: {Flatness * m:F4}{s}\nMax +Dev: {MaxPositiveDeviation * m:F4}{s}\nMax -Dev: {MaxNegativeDeviation * m:F4}{s}\nPoints: {PointCount:N0}";
+        return $"Flatness: {Flatness * scale:F4}mm\nMax +Dev: {MaxPositiveDeviation * scale:F4}mm\nMax -Dev: {MaxNegativeDeviation * scale:F4}mm\nPoints: {PointCount:N0}";
     }
 }
 
@@ -426,14 +416,12 @@ public class RoundnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Roundness: {Roundness * m:F4}{s}\nRadius: {FittedRadius * m:F3}{s}\nMax Dev: {MaxRadiusDeviation * m:F4}{s}\nMin Dev: {MinRadiusDeviation * m:F4}{s}\nCenter: ({Center.X * m:F2}, {Center.Y * m:F2}, {Center.Z * m:F2})";
+        return $"Roundness: {Roundness * scale:F4}mm\nRadius: {FittedRadius * scale:F3}mm\nMax Dev: {MaxRadiusDeviation * scale:F4}mm\nMin Dev: {MinRadiusDeviation * scale:F4}mm\nCenter: ({Center.X * scale:F2}, {Center.Y * scale:F2}, {Center.Z * scale:F2})";
     }
 }
 
@@ -458,14 +446,12 @@ public class CylindricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Cylindricity: {Cylindricity * m:F4}{s}\nRadius: {FittedRadius * m:F3}{s}\nMax Dev: {MaxRadiusDeviation * m:F4}{s}\nMin Dev: {MinRadiusDeviation * m:F4}{s}\nPoints: {PointCount:N0}";
+        return $"Cylindricity: {Cylindricity * scale:F4}mm\nRadius: {FittedRadius * scale:F3}mm\nMax Dev: {MaxRadiusDeviation * scale:F4}mm\nMin Dev: {MinRadiusDeviation * scale:F4}mm\nPoints: {PointCount:N0}";
     }
 }
 
@@ -487,14 +473,12 @@ public class ParallelismMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Parallelism: {Parallelism * m:F4}{s}\nAngle: {AngleBetweenPlanes:F4}°";
+        return $"Parallelism: {Parallelism * scale:F4}mm\nAngle: {AngleBetweenPlanes:F4}°";
     }
 }
 
@@ -517,14 +501,12 @@ public class PerpendicularityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Perpendicularity: {Perpendicularity * m:F4}{s}\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
+        return $"Perpendicularity: {Perpendicularity * scale:F4}mm\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
     }
 }
 
@@ -548,14 +530,12 @@ public class ConcentricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Concentricity: {Concentricity * m:F4}{s}\nOffset: ({Offset.X * m:F3}, {Offset.Y * m:F3}, {Offset.Z * m:F3})\nCircle 1 R: {Circle1Radius * m:F3}{s}\nCircle 2 R: {Circle2Radius * m:F3}{s}";
+        return $"Concentricity: {Concentricity * scale:F4}mm\nOffset: ({Offset.X * scale:F3}, {Offset.Y * scale:F3}, {Offset.Z * scale:F3})\nCircle 1 R: {Circle1Radius * scale:F3}mm\nCircle 2 R: {Circle2Radius * scale:F3}mm";
     }
 }
 
@@ -580,14 +560,12 @@ public class CoaxialityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return GetFormattedResult(MeasurementUnit.Millimeter);
+        return GetFormattedResult(1f);
     }
 
-    public override string GetFormattedResult(MeasurementUnit unit)
+    public override string GetFormattedResult(float scale)
     {
-        var m = MeasurementUnitHelper.GetMultiplier(unit);
-        var s = MeasurementUnitHelper.GetSuffix(unit);
-        return $"Coaxiality: {Coaxiality * m:F4}{s}\nAxis Offset: {AxisOffset * m:F4}{s}\nAxis Angle: {AxisAngle:F4}°";
+        return $"Coaxiality: {Coaxiality * scale:F4}mm\nAxis Offset: {AxisOffset * scale:F4}mm\nAxis Angle: {AxisAngle:F4}°";
     }
 }
 
