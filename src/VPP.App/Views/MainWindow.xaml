@@ -464,13 +464,13 @@
                                         <StackPanel>
                                             <TextBlock Text="Measurement Tools" FontWeight="Bold" Foreground="White" FontSize="14"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                <TextBlock Text="1mm =" Foreground="#AAA" VerticalAlignment="Center" FontSize="11" Margin="0,0,5,0"/>
+                                                <TextBlock Text="1 unit =" Foreground="#AAA" VerticalAlignment="Center" FontSize="11" Margin="0,0,5,0"/>
                                                 <TextBox Text="{Binding MeasurementUnitScale, UpdateSourceTrigger=PropertyChanged}"
                                                          Width="60" Height="22" FontSize="11"
                                                          Background="#3D3D3D" Foreground="White" BorderBrush="#555"
                                                          VerticalContentAlignment="Center" Padding="4,0"
-                                                         ToolTip="Enter scale (e.g., 0.001, 1, 10)"/>
-                                                <TextBlock Text="unit" Foreground="#AAA" VerticalAlignment="Center" FontSize="11" Margin="5,0,0,0"/>
+                                                         ToolTip="Enter mm per unit (e.g., 0.001, 1, 10)"/>
+                                                <TextBlock Text="mm" Foreground="#AAA" VerticalAlignment="Center" FontSize="11" Margin="5,0,0,0"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
