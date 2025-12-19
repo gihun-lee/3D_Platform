@@ -145,7 +145,7 @@ public partial class MainViewModel : ObservableObject
     {
         _pluginService = new PluginService();
         _executionEngine = new ExecutionEngine();
-        
+
         // Load built-in plugins
         _pluginService.LoadFromAssembly(typeof(PointCloudPlugin).Assembly);
 
@@ -154,6 +154,15 @@ public partial class MainViewModel : ObservableObject
         {
             AvailableNodes.Add($"{category}/{name}");
         }
+
+        // Listen to depth visualization toggle changes and refresh visualization
+        Scene.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(Scene.IsDepthVisualizationEnabled))
+            {
+                UpdateVisualization();
+            }
+        };
 
         _executionEngine.NodeExecuting += (s, e) =>
             StatusMessage = $"Executing: {e.Node.Name}";
