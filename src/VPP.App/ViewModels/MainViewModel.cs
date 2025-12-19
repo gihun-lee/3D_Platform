@@ -9,6 +9,7 @@ using VPP.Core.Models;
 using VPP.Core.Services;
 using VPP.Plugins.PointCloud;
 using VPP.Plugins.PointCloud.Models;
+using VPP.Plugins.PointCloud.Services;
 using HelixToolkit.Wpf.SharpDX;
 using SharpDX;
 using VPP.App.Rendering;
@@ -96,6 +97,23 @@ public partial class MainViewModel : ObservableObject
     // Flag to skip intermediate UI updates during batch execution
     private bool _skipIntermediateUpdates = false;
 
+    // Measurement Tools
+    [ObservableProperty] private bool _isMeasurementToolsVisible;
+    [ObservableProperty] private MeasurementToolType _activeMeasurementTool = MeasurementToolType.None;
+    [ObservableProperty] private ObservableCollection<MeasurementToolDescriptor> _basicMeasurementTools = new();
+    [ObservableProperty] private ObservableCollection<MeasurementToolDescriptor> _gdtMeasurementTools = new();
+    [ObservableProperty] private MeasurementResult? _currentMeasurementResult;
+    [ObservableProperty] private ObservableCollection<MeasurementResult> _measurementHistory = new();
+    [ObservableProperty] private string _measurementStatusMessage = "";
+    [ObservableProperty] private string _selectedHeightAxis = "Z";
+
+    // Measurement point picking state
+    private List<System.Numerics.Vector3> _pickedPoints = new();
+    private int _requiredPointsForTool = 0;
+
+    // Measurement service
+    private readonly MeasurementService _measurementService = new();
+
     public MainViewModel()
     {
         _pluginService = new PluginService();
@@ -132,6 +150,20 @@ public partial class MainViewModel : ObservableObject
                 UpdateInspectionCards();
             }
         };
+
+        // Initialize measurement tools
+        InitializeMeasurementTools();
+    }
+
+    private void InitializeMeasurementTools()
+    {
+        var allTools = MeasurementToolDescriptor.GetAllTools();
+
+        BasicMeasurementTools = new ObservableCollection<MeasurementToolDescriptor>(
+            allTools.Where(t => t.Category == MeasurementCategory.Basic));
+
+        GdtMeasurementTools = new ObservableCollection<MeasurementToolDescriptor>(
+            allTools.Where(t => t.Category == MeasurementCategory.GDT));
     }
 
     partial void OnIsRoiFilterOnChanged(bool value)
@@ -1497,6 +1529,11 @@ public partial class MainViewModel : ObservableObject
             nodeVm.IsSelected = true;
             SelectedNode = nodeVm;
 
+            // Hide measurement tools when a node is selected
+            IsMeasurementToolsVisible = false;
+            ActiveMeasurementTool = MeasurementToolType.None;
+            ClearMeasurementState();
+
             // Enable ROI drawing mode if this is a ROI Draw node
             if (nodeVm.Name == "ROI Draw")
             {
@@ -1637,11 +1674,14 @@ public partial class MainViewModel : ObservableObject
             SelectedNode = null;
             IsRoiDrawingMode = false;
             SelectedRoiNode = null;
-            
+
             // IMPORTANT: Show all ROIs when nothing is selected
             UpdateAllRoiVisualizations();
-            
-            StatusMessage = "Ready - Showing all data";
+
+            // Show measurement tools panel when no node is selected
+            IsMeasurementToolsVisible = true;
+
+            StatusMessage = "Measurement Tools - Select a tool to begin measuring";
         }
 
         // Update result panel visibility
@@ -1749,6 +1789,243 @@ public partial class MainViewModel : ObservableObject
             return value;
         return default!;
     }
+
+    #region Measurement Tools
+
+    private void ClearMeasurementState()
+    {
+        _pickedPoints.Clear();
+        _requiredPointsForTool = 0;
+        MeasurementStatusMessage = "";
+    }
+
+    [RelayCommand]
+    private void SelectMeasurementTool(MeasurementToolType toolType)
+    {
+        ActiveMeasurementTool = toolType;
+        ClearMeasurementState();
+
+        var toolDescriptor = MeasurementToolDescriptor.GetAllTools().FirstOrDefault(t => t.Type == toolType);
+        if (toolDescriptor == null)
+        {
+            MeasurementStatusMessage = "Unknown tool selected";
+            return;
+        }
+
+        _requiredPointsForTool = toolDescriptor.RequiredPoints;
+
+        if (_requiredPointsForTool == 0)
+        {
+            // Tool works on entire point cloud, execute immediately
+            ExecutePointCloudMeasurement(toolType);
+        }
+        else
+        {
+            MeasurementStatusMessage = $"Click {_requiredPointsForTool} point(s) in the 3D viewer to measure";
+            StatusMessage = $"{toolDescriptor.Name}: Click {_requiredPointsForTool} point(s) in the 3D viewer";
+        }
+    }
+
+    public void AddMeasurementPoint(System.Numerics.Vector3 point)
+    {
+        if (ActiveMeasurementTool == MeasurementToolType.None || _requiredPointsForTool == 0)
+            return;
+
+        _pickedPoints.Add(point);
+        MeasurementStatusMessage = $"Point {_pickedPoints.Count}/{_requiredPointsForTool} selected: ({point.X:F2}, {point.Y:F2}, {point.Z:F2})";
+        StatusMessage = MeasurementStatusMessage;
+
+        if (_pickedPoints.Count >= _requiredPointsForTool)
+        {
+            ExecutePointMeasurement();
+        }
+    }
+
+    private void ExecutePointMeasurement()
+    {
+        MeasurementResult? result = null;
+
+        switch (ActiveMeasurementTool)
+        {
+            case MeasurementToolType.Distance when _pickedPoints.Count >= 2:
+                result = _measurementService.MeasureDistance(_pickedPoints[0], _pickedPoints[1]);
+                break;
+
+            case MeasurementToolType.Angle when _pickedPoints.Count >= 3:
+                result = _measurementService.MeasureAngle(_pickedPoints[0], _pickedPoints[1], _pickedPoints[2]);
+                break;
+
+            case MeasurementToolType.PointToPlane when _pickedPoints.Count >= 1:
+                // For point-to-plane, we use the fitted plane from the point cloud
+                var flatness = GetFlatnessMeasurement();
+                if (flatness != null && flatness.IsValid)
+                {
+                    result = _measurementService.MeasurePointToPlane(_pickedPoints[0], flatness.PlaneNormal, flatness.PlaneD);
+                }
+                else
+                {
+                    MeasurementStatusMessage = "Could not fit plane to point cloud";
+                }
+                break;
+        }
+
+        if (result != null)
+        {
+            CurrentMeasurementResult = result;
+            MeasurementHistory.Insert(0, result);
+            MeasurementStatusMessage = result.GetFormattedResult();
+            StatusMessage = $"{result.Name}: {result.GetFormattedResult().Replace("\n", " | ")}";
+        }
+
+        // Reset for next measurement
+        _pickedPoints.Clear();
+    }
+
+    private void ExecutePointCloudMeasurement(MeasurementToolType toolType)
+    {
+        var cloud = GetCurrentPointCloud();
+        if (cloud == null || cloud.Points.Count == 0)
+        {
+            MeasurementStatusMessage = "No point cloud data available. Load a point cloud first.";
+            StatusMessage = MeasurementStatusMessage;
+            return;
+        }
+
+        MeasurementResult? result = null;
+
+        switch (toolType)
+        {
+            case MeasurementToolType.Height:
+                result = _measurementService.MeasureHeight(cloud, SelectedHeightAxis);
+                break;
+
+            case MeasurementToolType.BoundingBox:
+                result = _measurementService.MeasureBoundingBox(cloud);
+                break;
+
+            case MeasurementToolType.Centroid:
+                result = _measurementService.MeasureCentroid(cloud);
+                break;
+
+            case MeasurementToolType.PointDensity:
+                result = _measurementService.MeasurePointDensity(cloud);
+                break;
+
+            case MeasurementToolType.SurfaceArea:
+                result = _measurementService.MeasureSurfaceArea(cloud);
+                break;
+
+            case MeasurementToolType.Flatness:
+                result = _measurementService.MeasureFlatness(cloud);
+                break;
+
+            case MeasurementToolType.Roundness:
+                result = _measurementService.MeasureRoundness(cloud);
+                break;
+
+            case MeasurementToolType.Cylindricity:
+                result = _measurementService.MeasureCylindricity(cloud);
+                break;
+
+            // Tools requiring two selections (future implementation)
+            case MeasurementToolType.Parallelism:
+            case MeasurementToolType.Perpendicularity:
+            case MeasurementToolType.Concentricity:
+            case MeasurementToolType.Coaxiality:
+                MeasurementStatusMessage = "This tool requires two point cloud selections. Feature coming soon.";
+                StatusMessage = MeasurementStatusMessage;
+                return;
+        }
+
+        if (result != null)
+        {
+            CurrentMeasurementResult = result;
+            MeasurementHistory.Insert(0, result);
+            MeasurementStatusMessage = result.GetFormattedResult();
+            StatusMessage = $"{result.Name}: {result.GetFormattedResult().Replace("\n", " | ")}";
+        }
+        else
+        {
+            MeasurementStatusMessage = "Measurement failed";
+            StatusMessage = MeasurementStatusMessage;
+        }
+    }
+
+    private PointCloudData? GetCurrentPointCloud()
+    {
+        if (_lastExecutionContext == null) return null;
+
+        // Try to get point cloud from import nodes
+        var importNodes = Graph.Nodes.Where(n => n.Name == "Import Point Cloud").ToList();
+        var clouds = new List<PointCloudData>();
+
+        foreach (var importNode in importNodes)
+        {
+            var nodeCloud = _lastExecutionContext.Get<PointCloudData>($"{VPP.Core.Models.ExecutionContext.PointCloudKey}_{importNode.Id}");
+            if (nodeCloud != null && nodeCloud.Points.Count > 0)
+            {
+                clouds.Add(nodeCloud);
+            }
+        }
+
+        // Fallback to global cloud
+        if (clouds.Count == 0)
+        {
+            var globalCloud = _lastExecutionContext.Get<PointCloudData>(VPP.Core.Models.ExecutionContext.PointCloudKey);
+            if (globalCloud != null && globalCloud.Points.Count > 0)
+            {
+                clouds.Add(globalCloud);
+            }
+        }
+
+        // Merge all clouds
+        if (clouds.Count == 0) return null;
+
+        var merged = new PointCloudData();
+        foreach (var c in clouds)
+        {
+            merged.Points.AddRange(c.Points);
+            if (c.Colors != null)
+            {
+                merged.Colors ??= new List<System.Numerics.Vector3>();
+                merged.Colors.AddRange(c.Colors);
+            }
+            if (c.Normals != null)
+            {
+                merged.Normals ??= new List<System.Numerics.Vector3>();
+                merged.Normals.AddRange(c.Normals);
+            }
+        }
+        merged.ComputeBoundingBox();
+        return merged;
+    }
+
+    private FlatnessMeasurement? GetFlatnessMeasurement()
+    {
+        var cloud = GetCurrentPointCloud();
+        if (cloud == null) return null;
+        return _measurementService.MeasureFlatness(cloud);
+    }
+
+    [RelayCommand]
+    private void ClearMeasurementHistory()
+    {
+        MeasurementHistory.Clear();
+        CurrentMeasurementResult = null;
+        MeasurementStatusMessage = "History cleared";
+    }
+
+    [RelayCommand]
+    private void SetHeightAxis(string axis)
+    {
+        SelectedHeightAxis = axis;
+        if (ActiveMeasurementTool == MeasurementToolType.Height)
+        {
+            ExecutePointCloudMeasurement(MeasurementToolType.Height);
+        }
+    }
+
+    #endregion
 
     [RelayCommand]
     private void SaveWorkflow()
