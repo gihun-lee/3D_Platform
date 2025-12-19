@@ -170,7 +170,7 @@ public class DistanceMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Total: {TotalDistance * scale:F3}mm\nX: {DistanceX * scale:F3}mm\nY: {DistanceY * scale:F3}mm\nZ: {DistanceZ * scale:F3}mm";
+        return $"Total: {TotalDistance / scale:F3}\nX: {DistanceX / scale:F3}\nY: {DistanceY / scale:F3}\nZ: {DistanceZ / scale:F3}";
     }
 }
 
@@ -223,7 +223,7 @@ public class HeightMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Axis: {Axis}\nMin: {MinHeight * scale:F3}mm\nMax: {MaxHeight * scale:F3}mm\nRange: {Range * scale:F3}mm\nMean: {Mean * scale:F3}mm\nStdDev: {StandardDeviation * scale:F3}mm\nPoints: {PointCount:N0}";
+        return $"Axis: {Axis}\nMin: {MinHeight / scale:F3}\nMax: {MaxHeight / scale:F3}\nRange: {Range / scale:F3}\nMean: {Mean / scale:F3}\nStdDev: {StandardDeviation / scale:F3}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -253,7 +253,7 @@ public class BoundingBoxMeasurement : MeasurementResult
     public override string GetFormattedResult(float scale)
     {
         var s3 = scale * scale * scale; // volume scale
-        return $"Size: {Size.X * scale:F3} x {Size.Y * scale:F3} x {Size.Z * scale:F3} mm\nVolume: {Volume * s3:F3} mm³\nDiagonal: {DiagonalLength * scale:F3}mm\nCenter: ({Center.X * scale:F2}, {Center.Y * scale:F2}, {Center.Z * scale:F2})";
+        return $"Size: {Size.X / scale:F3} x {Size.Y / scale:F3} x {Size.Z / scale:F3}\nVolume: {Volume / s3:F3}\nDiagonal: {DiagonalLength / scale:F3}\nCenter: ({Center.X / scale:F2}, {Center.Y / scale:F2}, {Center.Z / scale:F2})";
     }
 }
 
@@ -278,7 +278,7 @@ public class CentroidMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Centroid: ({Centroid.X * scale:F3}, {Centroid.Y * scale:F3}, {Centroid.Z * scale:F3}) mm\nPoint Count: {PointCount:N0}";
+        return $"Centroid: ({Centroid.X / scale:F3}, {Centroid.Y / scale:F3}, {Centroid.Z / scale:F3})\nPoint Count: {PointCount:N0}";
     }
 }
 
@@ -306,7 +306,7 @@ public class PointDensityMeasurement : MeasurementResult
     public override string GetFormattedResult(float scale)
     {
         var s3 = scale * scale * scale; // volume scale
-        return $"Density: {Density / s3:F4} pts/mm³\nAvg Spacing: {AverageSpacing * scale:F3}mm\nPoints: {PointCount:N0}\nVolume: {BoundingVolume * s3:F3} mm³";
+        return $"Density: {Density * s3:F4} pts/unit³\nAvg Spacing: {AverageSpacing / scale:F3}\nPoints: {PointCount:N0}\nVolume: {BoundingVolume / s3:F3}";
     }
 }
 
@@ -333,7 +333,7 @@ public class SurfaceAreaMeasurement : MeasurementResult
     public override string GetFormattedResult(float scale)
     {
         var s2 = scale * scale; // area scale
-        return $"Surface Area: {SurfaceArea * s2:F3} mm²\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea * s2:F3} mm²";
+        return $"Surface Area: {SurfaceArea / s2:F3}\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea / s2:F3}";
     }
 }
 
@@ -361,7 +361,7 @@ public class PointToPlaneMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Distance: {Distance * scale:F3}mm\nPoint: ({Point.X * scale:F2}, {Point.Y * scale:F2}, {Point.Z * scale:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
+        return $"Distance: {Distance / scale:F3}\nPoint: ({Point.X / scale:F2}, {Point.Y / scale:F2}, {Point.Z / scale:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
     }
 }
 
@@ -392,7 +392,7 @@ public class FlatnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Flatness: {Flatness * scale:F4}mm\nMax +Dev: {MaxPositiveDeviation * scale:F4}mm\nMax -Dev: {MaxNegativeDeviation * scale:F4}mm\nPoints: {PointCount:N0}";
+        return $"Flatness: {Flatness / scale:F4}\nMax +Dev: {MaxPositiveDeviation / scale:F4}\nMax -Dev: {MaxNegativeDeviation / scale:F4}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -421,7 +421,7 @@ public class RoundnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Roundness: {Roundness * scale:F4}mm\nRadius: {FittedRadius * scale:F3}mm\nMax Dev: {MaxRadiusDeviation * scale:F4}mm\nMin Dev: {MinRadiusDeviation * scale:F4}mm\nCenter: ({Center.X * scale:F2}, {Center.Y * scale:F2}, {Center.Z * scale:F2})";
+        return $"Roundness: {Roundness / scale:F4}\nRadius: {FittedRadius / scale:F3}\nMax Dev: {MaxRadiusDeviation / scale:F4}\nMin Dev: {MinRadiusDeviation / scale:F4}\nCenter: ({Center.X / scale:F2}, {Center.Y / scale:F2}, {Center.Z / scale:F2})";
     }
 }
 
@@ -451,7 +451,7 @@ public class CylindricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Cylindricity: {Cylindricity * scale:F4}mm\nRadius: {FittedRadius * scale:F3}mm\nMax Dev: {MaxRadiusDeviation * scale:F4}mm\nMin Dev: {MinRadiusDeviation * scale:F4}mm\nPoints: {PointCount:N0}";
+        return $"Cylindricity: {Cylindricity / scale:F4}\nRadius: {FittedRadius / scale:F3}\nMax Dev: {MaxRadiusDeviation / scale:F4}\nMin Dev: {MinRadiusDeviation / scale:F4}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -478,7 +478,7 @@ public class ParallelismMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Parallelism: {Parallelism * scale:F4}mm\nAngle: {AngleBetweenPlanes:F4}°";
+        return $"Parallelism: {Parallelism / scale:F4}\nAngle: {AngleBetweenPlanes:F4}°";
     }
 }
 
@@ -506,7 +506,7 @@ public class PerpendicularityMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Perpendicularity: {Perpendicularity * scale:F4}mm\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
+        return $"Perpendicularity: {Perpendicularity / scale:F4}\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
     }
 }
 
@@ -535,7 +535,7 @@ public class ConcentricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Concentricity: {Concentricity * scale:F4}mm\nOffset: ({Offset.X * scale:F3}, {Offset.Y * scale:F3}, {Offset.Z * scale:F3})\nCircle 1 R: {Circle1Radius * scale:F3}mm\nCircle 2 R: {Circle2Radius * scale:F3}mm";
+        return $"Concentricity: {Concentricity / scale:F4}\nOffset: ({Offset.X / scale:F3}, {Offset.Y / scale:F3}, {Offset.Z / scale:F3})\nCircle 1 R: {Circle1Radius / scale:F3}\nCircle 2 R: {Circle2Radius / scale:F3}";
     }
 }
 
@@ -565,7 +565,7 @@ public class CoaxialityMeasurement : MeasurementResult
 
     public override string GetFormattedResult(float scale)
     {
-        return $"Coaxiality: {Coaxiality * scale:F4}mm\nAxis Offset: {AxisOffset * scale:F4}mm\nAxis Angle: {AxisAngle:F4}°";
+        return $"Coaxiality: {Coaxiality / scale:F4}\nAxis Offset: {AxisOffset / scale:F4}\nAxis Angle: {AxisAngle:F4}°";
     }
 }
 
