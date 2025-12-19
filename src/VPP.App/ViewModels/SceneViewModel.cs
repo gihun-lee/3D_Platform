@@ -743,6 +743,499 @@ public partial class SceneViewModel : ObservableObject
             TextureCoordinates = texCoords
         };
     }
+
+    #region Measurement Visualization
+
+    // Measurement visualization properties
+    [ObservableProperty] private ObservableElement3DCollection _measurementModels = new();
+    [ObservableProperty] private LineGeometry3D? _measurementLineGeometry;
+    [ObservableProperty] private Color _measurementLineColor = Colors.Cyan;
+    [ObservableProperty] private PointGeometry3D? _measurementPointsGeometry;
+    [ObservableProperty] private Color _measurementPointColor = Colors.Magenta;
+    [ObservableProperty] private LineGeometry3D? _measurementPlaneGeometry;
+    [ObservableProperty] private Color _measurementPlaneColor = Colors.LightBlue;
+    [ObservableProperty] private LineGeometry3D? _boundingBoxGeometry;
+    [ObservableProperty] private Color _boundingBoxColor = Colors.Orange;
+
+    /// <summary>
+    /// Update picked points visualization
+    /// </summary>
+    public void UpdatePickedPoints(List<System.Numerics.Vector3> points)
+    {
+        MeasurementModels.Clear();
+
+        if (points == null || points.Count == 0)
+        {
+            MeasurementPointsGeometry = null;
+            MeasurementLineGeometry = null;
+            return;
+        }
+
+        // Create point geometry for picked points
+        var pointPositions = new Vector3Collection();
+        foreach (var p in points)
+        {
+            pointPositions.Add(new Vector3(p.X, p.Y, p.Z));
+        }
+
+        var pointGeometry = new PointGeometry3D { Positions = pointPositions };
+        MeasurementPointsGeometry = pointGeometry;
+
+        // Add point spheres for visibility
+        foreach (var point in points)
+        {
+            var sphereGeometry = CreateSphereGeometry(point, 1.0f, 8, 4);
+            var sphereModel = new MeshGeometryModel3D
+            {
+                Geometry = sphereGeometry,
+                Material = new PhongMaterial { DiffuseColor = new Color4(1.0f, 0.0f, 1.0f, 1.0f) } // Magenta
+            };
+            MeasurementModels.Add(sphereModel);
+        }
+
+        // If we have 2+ points, draw lines between them
+        if (points.Count >= 2)
+        {
+            var linePositions = new Vector3Collection();
+            var lineIndices = new IntCollection();
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                linePositions.Add(new Vector3(points[i].X, points[i].Y, points[i].Z));
+            }
+
+            for (int i = 0; i < points.Count - 1; i++)
+            {
+                lineIndices.Add(i);
+                lineIndices.Add(i + 1);
+            }
+
+            var lineGeometry = new LineGeometry3D
+            {
+                Positions = linePositions,
+                Indices = lineIndices
+            };
+
+            MeasurementLineGeometry = lineGeometry;
+
+            var lineModel = new LineGeometryModel3D
+            {
+                Geometry = lineGeometry,
+                Color = Colors.Cyan,
+                Thickness = 3
+            };
+            MeasurementModels.Add(lineModel);
+        }
+    }
+
+    /// <summary>
+    /// Show distance measurement visualization
+    /// </summary>
+    public void ShowDistanceMeasurement(System.Numerics.Vector3 p1, System.Numerics.Vector3 p2, float distance)
+    {
+        MeasurementModels.Clear();
+
+        // Create line between points
+        var linePositions = new Vector3Collection
+        {
+            new Vector3(p1.X, p1.Y, p1.Z),
+            new Vector3(p2.X, p2.Y, p2.Z)
+        };
+        var lineIndices = new IntCollection { 0, 1 };
+
+        var lineGeometry = new LineGeometry3D
+        {
+            Positions = linePositions,
+            Indices = lineIndices
+        };
+        MeasurementLineGeometry = lineGeometry;
+
+        // Main measurement line
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = lineGeometry,
+            Color = Colors.Cyan,
+            Thickness = 4
+        });
+
+        // End point spheres
+        var sphere1 = CreateSphereGeometry(p1, 1.5f, 8, 4);
+        MeasurementModels.Add(new MeshGeometryModel3D
+        {
+            Geometry = sphere1,
+            Material = new PhongMaterial { DiffuseColor = new Color4(0, 1, 0, 1) } // Green
+        });
+
+        var sphere2 = CreateSphereGeometry(p2, 1.5f, 8, 4);
+        MeasurementModels.Add(new MeshGeometryModel3D
+        {
+            Geometry = sphere2,
+            Material = new PhongMaterial { DiffuseColor = new Color4(1, 0, 0, 1) } // Red
+        });
+
+        // Draw X, Y, Z component lines (dashed visualization)
+        var componentPositions = new Vector3Collection
+        {
+            // X component
+            new Vector3(p1.X, p1.Y, p1.Z),
+            new Vector3(p2.X, p1.Y, p1.Z),
+            // Y component
+            new Vector3(p2.X, p1.Y, p1.Z),
+            new Vector3(p2.X, p2.Y, p1.Z),
+            // Z component
+            new Vector3(p2.X, p2.Y, p1.Z),
+            new Vector3(p2.X, p2.Y, p2.Z)
+        };
+        var componentIndices = new IntCollection { 0, 1, 2, 3, 4, 5 };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = componentPositions, Indices = componentIndices },
+            Color = Color.FromArgb(150, 255, 255, 0), // Semi-transparent yellow
+            Thickness = 1
+        });
+    }
+
+    /// <summary>
+    /// Show angle measurement visualization
+    /// </summary>
+    public void ShowAngleMeasurement(System.Numerics.Vector3 p1, System.Numerics.Vector3 vertex, System.Numerics.Vector3 p3, float angleDegrees)
+    {
+        MeasurementModels.Clear();
+
+        // Draw lines from vertex to both points
+        var linePositions = new Vector3Collection
+        {
+            new Vector3(vertex.X, vertex.Y, vertex.Z),
+            new Vector3(p1.X, p1.Y, p1.Z),
+            new Vector3(vertex.X, vertex.Y, vertex.Z),
+            new Vector3(p3.X, p3.Y, p3.Z)
+        };
+        var lineIndices = new IntCollection { 0, 1, 2, 3 };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = linePositions, Indices = lineIndices },
+            Color = Colors.Cyan,
+            Thickness = 3
+        });
+
+        // Draw arc at vertex
+        var v1 = System.Numerics.Vector3.Normalize(p1 - vertex);
+        var v2 = System.Numerics.Vector3.Normalize(p3 - vertex);
+        var arcRadius = Math.Min((p1 - vertex).Length(), (p3 - vertex).Length()) * 0.3f;
+
+        var arcPositions = new Vector3Collection();
+        var arcIndices = new IntCollection();
+        const int arcSegments = 32;
+
+        for (int i = 0; i <= arcSegments; i++)
+        {
+            float t = (float)i / arcSegments;
+            var interpolated = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Lerp(v1, v2, t));
+            var arcPoint = vertex + interpolated * arcRadius;
+            arcPositions.Add(new Vector3(arcPoint.X, arcPoint.Y, arcPoint.Z));
+
+            if (i > 0)
+            {
+                arcIndices.Add(i - 1);
+                arcIndices.Add(i);
+            }
+        }
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = arcPositions, Indices = arcIndices },
+            Color = Colors.Yellow,
+            Thickness = 2
+        });
+
+        // Point spheres
+        foreach (var point in new[] { p1, vertex, p3 })
+        {
+            var sphere = CreateSphereGeometry(point, 1.0f, 8, 4);
+            MeasurementModels.Add(new MeshGeometryModel3D
+            {
+                Geometry = sphere,
+                Material = new PhongMaterial { DiffuseColor = new Color4(1, 0, 1, 1) } // Magenta
+            });
+        }
+    }
+
+    /// <summary>
+    /// Show bounding box visualization
+    /// </summary>
+    public void ShowBoundingBox(System.Numerics.Vector3 min, System.Numerics.Vector3 max, System.Numerics.Vector3 center)
+    {
+        MeasurementModels.Clear();
+
+        var corners = new[]
+        {
+            new Vector3(min.X, min.Y, min.Z),
+            new Vector3(max.X, min.Y, min.Z),
+            new Vector3(max.X, max.Y, min.Z),
+            new Vector3(min.X, max.Y, min.Z),
+            new Vector3(min.X, min.Y, max.Z),
+            new Vector3(max.X, min.Y, max.Z),
+            new Vector3(max.X, max.Y, max.Z),
+            new Vector3(min.X, max.Y, max.Z),
+        };
+
+        var positions = new Vector3Collection();
+        foreach (var corner in corners)
+            positions.Add(corner);
+
+        var indices = new IntCollection { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+
+        BoundingBoxGeometry = new LineGeometry3D { Positions = positions, Indices = indices };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = BoundingBoxGeometry,
+            Color = Colors.Orange,
+            Thickness = 2
+        });
+
+        // Center point
+        var centerSphere = CreateSphereGeometry(center, 2.0f, 8, 4);
+        MeasurementModels.Add(new MeshGeometryModel3D
+        {
+            Geometry = centerSphere,
+            Material = new PhongMaterial { DiffuseColor = new Color4(1, 0.5f, 0, 1) } // Orange
+        });
+    }
+
+    /// <summary>
+    /// Show centroid visualization
+    /// </summary>
+    public void ShowCentroid(System.Numerics.Vector3 centroid)
+    {
+        MeasurementModels.Clear();
+
+        // Centroid sphere
+        var sphere = CreateSphereGeometry(centroid, 3.0f, 12, 6);
+        MeasurementModels.Add(new MeshGeometryModel3D
+        {
+            Geometry = sphere,
+            Material = new PhongMaterial { DiffuseColor = new Color4(0, 1, 1, 1) } // Cyan
+        });
+
+        // Cross axes at centroid
+        float axisLength = 20f;
+        var axisPositions = new Vector3Collection
+        {
+            new Vector3(centroid.X - axisLength, centroid.Y, centroid.Z),
+            new Vector3(centroid.X + axisLength, centroid.Y, centroid.Z),
+            new Vector3(centroid.X, centroid.Y - axisLength, centroid.Z),
+            new Vector3(centroid.X, centroid.Y + axisLength, centroid.Z),
+            new Vector3(centroid.X, centroid.Y, centroid.Z - axisLength),
+            new Vector3(centroid.X, centroid.Y, centroid.Z + axisLength)
+        };
+        var axisIndices = new IntCollection { 0, 1, 2, 3, 4, 5 };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = axisPositions, Indices = axisIndices },
+            Color = Colors.Cyan,
+            Thickness = 1
+        });
+    }
+
+    /// <summary>
+    /// Show plane visualization for flatness/point-to-plane
+    /// </summary>
+    public void ShowPlane(System.Numerics.Vector3 center, System.Numerics.Vector3 normal, float size = 50f)
+    {
+        MeasurementModels.Clear();
+
+        var (u, v) = GetPlaneAxes(normal);
+
+        // Create plane grid
+        var positions = new Vector3Collection();
+        var indices = new IntCollection();
+
+        int gridLines = 10;
+        float halfSize = size / 2;
+
+        for (int i = 0; i <= gridLines; i++)
+        {
+            float t = -halfSize + (size * i / gridLines);
+
+            // Lines along U direction
+            var p1 = center + t * v - halfSize * u;
+            var p2 = center + t * v + halfSize * u;
+            int idx = positions.Count;
+            positions.Add(new Vector3(p1.X, p1.Y, p1.Z));
+            positions.Add(new Vector3(p2.X, p2.Y, p2.Z));
+            indices.Add(idx);
+            indices.Add(idx + 1);
+
+            // Lines along V direction
+            p1 = center + t * u - halfSize * v;
+            p2 = center + t * u + halfSize * v;
+            idx = positions.Count;
+            positions.Add(new Vector3(p1.X, p1.Y, p1.Z));
+            positions.Add(new Vector3(p2.X, p2.Y, p2.Z));
+            indices.Add(idx);
+            indices.Add(idx + 1);
+        }
+
+        MeasurementPlaneGeometry = new LineGeometry3D { Positions = positions, Indices = indices };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = MeasurementPlaneGeometry,
+            Color = Color.FromArgb(100, 100, 200, 255), // Semi-transparent light blue
+            Thickness = 1
+        });
+
+        // Normal vector arrow
+        var normalEnd = center + normal * (size / 3);
+        var normalPositions = new Vector3Collection
+        {
+            new Vector3(center.X, center.Y, center.Z),
+            new Vector3(normalEnd.X, normalEnd.Y, normalEnd.Z)
+        };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = normalPositions, Indices = new IntCollection { 0, 1 } },
+            Color = Colors.Green,
+            Thickness = 3
+        });
+    }
+
+    /// <summary>
+    /// Show roundness/circle visualization
+    /// </summary>
+    public void ShowCircleFit(System.Numerics.Vector3 center, float radius, System.Numerics.Vector3 normal)
+    {
+        MeasurementModels.Clear();
+
+        // Draw fitted circle
+        var circleGeometry = CreateCircleOutline(center, radius, normal);
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = circleGeometry,
+            Color = Colors.Lime,
+            Thickness = 3
+        });
+
+        // Center point
+        var centerSphere = CreateSphereGeometry(center, 1.5f, 8, 4);
+        MeasurementModels.Add(new MeshGeometryModel3D
+        {
+            Geometry = centerSphere,
+            Material = new PhongMaterial { DiffuseColor = new Color4(0, 1, 0, 1) } // Green
+        });
+
+        // Radius line
+        var (u, _) = GetPlaneAxes(normal);
+        var radiusEnd = center + u * radius;
+        var radiusPositions = new Vector3Collection
+        {
+            new Vector3(center.X, center.Y, center.Z),
+            new Vector3(radiusEnd.X, radiusEnd.Y, radiusEnd.Z)
+        };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = radiusPositions, Indices = new IntCollection { 0, 1 } },
+            Color = Colors.Yellow,
+            Thickness = 2
+        });
+    }
+
+    /// <summary>
+    /// Show cylindricity visualization
+    /// </summary>
+    public void ShowCylinderFit(System.Numerics.Vector3 axisPoint, System.Numerics.Vector3 axisDir, float radius, float height = 50f)
+    {
+        MeasurementModels.Clear();
+
+        // Create cylinder visualization
+        int segments = 32;
+        var positions = new Vector3Collection();
+        var indices = new IntCollection();
+
+        var (u, v) = GetPlaneAxes(axisDir);
+        var halfHeight = height / 2;
+        var top = axisPoint + axisDir * halfHeight;
+        var bottom = axisPoint - axisDir * halfHeight;
+
+        // Top circle
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * 2 * MathF.PI / segments;
+            var offset = u * radius * MathF.Cos(angle) + v * radius * MathF.Sin(angle);
+            positions.Add(new Vector3(top.X + offset.X, top.Y + offset.Y, top.Z + offset.Z));
+        }
+
+        // Bottom circle
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * 2 * MathF.PI / segments;
+            var offset = u * radius * MathF.Cos(angle) + v * radius * MathF.Sin(angle);
+            positions.Add(new Vector3(bottom.X + offset.X, bottom.Y + offset.Y, bottom.Z + offset.Z));
+        }
+
+        // Top circle indices
+        for (int i = 0; i < segments; i++)
+        {
+            indices.Add(i);
+            indices.Add((i + 1) % segments);
+        }
+
+        // Bottom circle indices
+        for (int i = 0; i < segments; i++)
+        {
+            indices.Add(segments + i);
+            indices.Add(segments + (i + 1) % segments);
+        }
+
+        // Vertical lines
+        for (int i = 0; i < segments; i += segments / 8)
+        {
+            indices.Add(i);
+            indices.Add(segments + i);
+        }
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = positions, Indices = indices },
+            Color = Colors.Lime,
+            Thickness = 2
+        });
+
+        // Axis line
+        var axisPositions = new Vector3Collection
+        {
+            new Vector3(bottom.X, bottom.Y, bottom.Z),
+            new Vector3(top.X, top.Y, top.Z)
+        };
+
+        MeasurementModels.Add(new LineGeometryModel3D
+        {
+            Geometry = new LineGeometry3D { Positions = axisPositions, Indices = new IntCollection { 0, 1 } },
+            Color = Colors.Red,
+            Thickness = 3
+        });
+    }
+
+    /// <summary>
+    /// Clear all measurement visualizations
+    /// </summary>
+    public void ClearMeasurementVisualization()
+    {
+        MeasurementModels.Clear();
+        MeasurementLineGeometry = null;
+        MeasurementPointsGeometry = null;
+        MeasurementPlaneGeometry = null;
+        BoundingBoxGeometry = null;
+    }
+
+    #endregion
 }
 
 public class RoiVisualizationData

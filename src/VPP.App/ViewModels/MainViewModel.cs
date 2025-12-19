@@ -1797,6 +1797,18 @@ public partial class MainViewModel : ObservableObject
         _pickedPoints.Clear();
         _requiredPointsForTool = 0;
         MeasurementStatusMessage = "";
+        Scene.ClearMeasurementVisualization();
+    }
+
+    [RelayCommand]
+    private void ClearCurrentMeasurement()
+    {
+        _pickedPoints.Clear();
+        ActiveMeasurementTool = MeasurementToolType.None;
+        CurrentMeasurementResult = null;
+        MeasurementStatusMessage = "Measurement cleared. Select a tool to start.";
+        StatusMessage = MeasurementStatusMessage;
+        Scene.ClearMeasurementVisualization();
     }
 
     [RelayCommand]
@@ -1835,6 +1847,9 @@ public partial class MainViewModel : ObservableObject
         MeasurementStatusMessage = $"Point {_pickedPoints.Count}/{_requiredPointsForTool} selected: ({point.X:F2}, {point.Y:F2}, {point.Z:F2})";
         StatusMessage = MeasurementStatusMessage;
 
+        // Update visualization with picked points
+        Scene.UpdatePickedPoints(_pickedPoints);
+
         if (_pickedPoints.Count >= _requiredPointsForTool)
         {
             ExecutePointMeasurement();
@@ -1849,10 +1864,18 @@ public partial class MainViewModel : ObservableObject
         {
             case MeasurementToolType.Distance when _pickedPoints.Count >= 2:
                 result = _measurementService.MeasureDistance(_pickedPoints[0], _pickedPoints[1]);
+                if (result is DistanceMeasurement distResult)
+                {
+                    Scene.ShowDistanceMeasurement(distResult.Point1, distResult.Point2, distResult.TotalDistance);
+                }
                 break;
 
             case MeasurementToolType.Angle when _pickedPoints.Count >= 3:
                 result = _measurementService.MeasureAngle(_pickedPoints[0], _pickedPoints[1], _pickedPoints[2]);
+                if (result is AngleMeasurement angleResult)
+                {
+                    Scene.ShowAngleMeasurement(angleResult.Point1, angleResult.Vertex, angleResult.Point3, angleResult.AngleDegrees);
+                }
                 break;
 
             case MeasurementToolType.PointToPlane when _pickedPoints.Count >= 1:
@@ -1861,6 +1884,11 @@ public partial class MainViewModel : ObservableObject
                 if (flatness != null && flatness.IsValid)
                 {
                     result = _measurementService.MeasurePointToPlane(_pickedPoints[0], flatness.PlaneNormal, flatness.PlaneD);
+                    if (result is PointToPlaneMeasurement ptpResult)
+                    {
+                        var centroid = _measurementService.MeasureCentroid(GetCurrentPointCloud()!).Centroid;
+                        Scene.ShowPlane(centroid, ptpResult.PlaneNormal, 100f);
+                    }
                 }
                 else
                 {
@@ -1877,7 +1905,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = $"{result.Name}: {result.GetFormattedResult().Replace("\n", " | ")}";
         }
 
-        // Reset for next measurement
+        // Reset picked points for next measurement
         _pickedPoints.Clear();
     }
 
@@ -1897,34 +1925,58 @@ public partial class MainViewModel : ObservableObject
         {
             case MeasurementToolType.Height:
                 result = _measurementService.MeasureHeight(cloud, SelectedHeightAxis);
+                // No specific visualization for height (uses point cloud colors)
                 break;
 
             case MeasurementToolType.BoundingBox:
                 result = _measurementService.MeasureBoundingBox(cloud);
+                if (result is BoundingBoxMeasurement bbResult)
+                {
+                    Scene.ShowBoundingBox(bbResult.Min, bbResult.Max, bbResult.Center);
+                }
                 break;
 
             case MeasurementToolType.Centroid:
                 result = _measurementService.MeasureCentroid(cloud);
+                if (result is CentroidMeasurement centResult)
+                {
+                    Scene.ShowCentroid(centResult.Centroid);
+                }
                 break;
 
             case MeasurementToolType.PointDensity:
                 result = _measurementService.MeasurePointDensity(cloud);
+                // No specific visualization for point density
                 break;
 
             case MeasurementToolType.SurfaceArea:
                 result = _measurementService.MeasureSurfaceArea(cloud);
+                // No specific visualization for surface area
                 break;
 
             case MeasurementToolType.Flatness:
                 result = _measurementService.MeasureFlatness(cloud);
+                if (result is FlatnessMeasurement flatResult)
+                {
+                    var centroid = _measurementService.MeasureCentroid(cloud).Centroid;
+                    Scene.ShowPlane(centroid, flatResult.PlaneNormal, 100f);
+                }
                 break;
 
             case MeasurementToolType.Roundness:
                 result = _measurementService.MeasureRoundness(cloud);
+                if (result is RoundnessMeasurement roundResult)
+                {
+                    Scene.ShowCircleFit(roundResult.Center, roundResult.FittedRadius, System.Numerics.Vector3.UnitZ);
+                }
                 break;
 
             case MeasurementToolType.Cylindricity:
                 result = _measurementService.MeasureCylindricity(cloud);
+                if (result is CylindricityMeasurement cylResult)
+                {
+                    Scene.ShowCylinderFit(cylResult.AxisPoint, cylResult.AxisDirection, cylResult.FittedRadius, 100f);
+                }
                 break;
 
             // Tools requiring two selections (future implementation)
