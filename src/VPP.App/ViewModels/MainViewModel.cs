@@ -106,20 +106,24 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<MeasurementResult> _measurementHistory = new();
     [ObservableProperty] private string _measurementStatusMessage = "";
     [ObservableProperty] private string _selectedHeightAxis = "Z";
-    [ObservableProperty] private MeasurementUnit _selectedMeasurementUnit = MeasurementUnit.Millimeter;
     [ObservableProperty] private MeasurementResult? _selectedHistoryItem;
+    [ObservableProperty] private string _measurementUnitScale = "1";  // User-defined scale: 1mm = this value
 
-    // Available measurement units for the ComboBox
-    public MeasurementUnit[] AvailableMeasurementUnits { get; } = Enum.GetValues<MeasurementUnit>();
-
-    partial void OnSelectedMeasurementUnitChanged(MeasurementUnit value)
+    partial void OnMeasurementUnitScaleChanged(string value)
     {
-        // Update the status message with the new unit
-        if (CurrentMeasurementResult != null)
+        // Update the status message with the new scale
+        if (CurrentMeasurementResult != null && float.TryParse(value, out float scale) && scale > 0)
         {
-            MeasurementStatusMessage = CurrentMeasurementResult.GetFormattedResult(value);
+            MeasurementStatusMessage = CurrentMeasurementResult.GetFormattedResult(scale);
             StatusMessage = $"{CurrentMeasurementResult.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
         }
+    }
+
+    private float GetCurrentUnitScale()
+    {
+        if (float.TryParse(MeasurementUnitScale, out float scale) && scale > 0)
+            return scale;
+        return 1f;
     }
 
     partial void OnSelectedHistoryItemChanged(MeasurementResult? value)
@@ -1924,7 +1928,7 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentMeasurementResult = result;
             MeasurementHistory.Insert(0, result);
-            MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+            MeasurementStatusMessage = result.GetFormattedResult(GetCurrentUnitScale());
             StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
         }
 
@@ -2016,7 +2020,7 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentMeasurementResult = result;
             MeasurementHistory.Insert(0, result);
-            MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+            MeasurementStatusMessage = result.GetFormattedResult(GetCurrentUnitScale());
             StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
         }
         else
@@ -2109,7 +2113,7 @@ public partial class MainViewModel : ObservableObject
     private void SelectHistoryItemInternal(MeasurementResult result)
     {
         CurrentMeasurementResult = result;
-        MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+        MeasurementStatusMessage = result.GetFormattedResult(GetCurrentUnitScale());
         StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
 
         // Restore visualization based on measurement type
