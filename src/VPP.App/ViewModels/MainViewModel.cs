@@ -106,6 +106,29 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<MeasurementResult> _measurementHistory = new();
     [ObservableProperty] private string _measurementStatusMessage = "";
     [ObservableProperty] private string _selectedHeightAxis = "Z";
+    [ObservableProperty] private MeasurementUnit _selectedMeasurementUnit = MeasurementUnit.Millimeter;
+    [ObservableProperty] private MeasurementResult? _selectedHistoryItem;
+
+    // Available measurement units for the ComboBox
+    public MeasurementUnit[] AvailableMeasurementUnits { get; } = Enum.GetValues<MeasurementUnit>();
+
+    partial void OnSelectedMeasurementUnitChanged(MeasurementUnit value)
+    {
+        // Update the status message with the new unit
+        if (CurrentMeasurementResult != null)
+        {
+            MeasurementStatusMessage = CurrentMeasurementResult.GetFormattedResult(value);
+            StatusMessage = $"{CurrentMeasurementResult.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
+        }
+    }
+
+    partial void OnSelectedHistoryItemChanged(MeasurementResult? value)
+    {
+        if (value != null)
+        {
+            SelectHistoryItemInternal(value);
+        }
+    }
 
     // Measurement point picking state
     private List<System.Numerics.Vector3> _pickedPoints = new();
@@ -1901,8 +1924,8 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentMeasurementResult = result;
             MeasurementHistory.Insert(0, result);
-            MeasurementStatusMessage = result.GetFormattedResult();
-            StatusMessage = $"{result.Name}: {result.GetFormattedResult().Replace("\n", " | ")}";
+            MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+            StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
         }
 
         // Reset picked points for next measurement
@@ -1993,8 +2016,8 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentMeasurementResult = result;
             MeasurementHistory.Insert(0, result);
-            MeasurementStatusMessage = result.GetFormattedResult();
-            StatusMessage = $"{result.Name}: {result.GetFormattedResult().Replace("\n", " | ")}";
+            MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+            StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
         }
         else
         {
@@ -2074,6 +2097,59 @@ public partial class MainViewModel : ObservableObject
         if (ActiveMeasurementTool == MeasurementToolType.Height)
         {
             ExecutePointCloudMeasurement(MeasurementToolType.Height);
+        }
+    }
+
+    [RelayCommand]
+    private void SelectHistoryItem(MeasurementResult result)
+    {
+        SelectHistoryItemInternal(result);
+    }
+
+    private void SelectHistoryItemInternal(MeasurementResult result)
+    {
+        CurrentMeasurementResult = result;
+        MeasurementStatusMessage = result.GetFormattedResult(SelectedMeasurementUnit);
+        StatusMessage = $"{result.Name}: {MeasurementStatusMessage.Replace("\n", " | ")}";
+
+        // Restore visualization based on measurement type
+        RestoreMeasurementVisualization(result);
+    }
+
+    private void RestoreMeasurementVisualization(MeasurementResult result)
+    {
+        switch (result)
+        {
+            case DistanceMeasurement dist:
+                Scene.ShowDistanceMeasurement(dist.Point1, dist.Point2, dist.TotalDistance);
+                break;
+            case AngleMeasurement angle:
+                Scene.ShowAngleMeasurement(angle.Point1, angle.Vertex, angle.Point3, angle.AngleDegrees);
+                break;
+            case BoundingBoxMeasurement bb:
+                Scene.ShowBoundingBox(bb.Min, bb.Max, bb.Center);
+                break;
+            case CentroidMeasurement cent:
+                Scene.ShowCentroid(cent.Centroid);
+                break;
+            case FlatnessMeasurement flat:
+                var flatCentroid = _measurementService.MeasureCentroid(GetCurrentPointCloud()!).Centroid;
+                Scene.ShowPlane(flatCentroid, flat.PlaneNormal, 100f);
+                break;
+            case RoundnessMeasurement round:
+                Scene.ShowCircleFit(round.Center, round.FittedRadius, System.Numerics.Vector3.UnitZ);
+                break;
+            case CylindricityMeasurement cyl:
+                Scene.ShowCylinderFit(cyl.AxisPoint, cyl.AxisDirection, cyl.FittedRadius, 100f);
+                break;
+            case PointToPlaneMeasurement ptp:
+                var ptpCentroid = _measurementService.MeasureCentroid(GetCurrentPointCloud()!).Centroid;
+                Scene.ShowPlane(ptpCentroid, ptp.PlaneNormal, 100f);
+                break;
+            default:
+                // For measurements without visualization, just clear
+                Scene.ClearMeasurementVisualization();
+                break;
         }
     }
 

@@ -39,6 +39,70 @@ public enum MeasurementCategory
 }
 
 /// <summary>
+/// Measurement units for display
+/// </summary>
+public enum MeasurementUnit
+{
+    Millimeter,  // mm (default, 1:1 with internal values)
+    Centimeter,  // cm (1cm = 10mm)
+    Meter        // m (1m = 1000mm)
+}
+
+/// <summary>
+/// Helper class for unit conversion
+/// </summary>
+public static class MeasurementUnitHelper
+{
+    public static float GetMultiplier(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => 1f,
+        MeasurementUnit.Centimeter => 0.1f,
+        MeasurementUnit.Meter => 0.001f,
+        _ => 1f
+    };
+
+    public static string GetSuffix(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => "mm",
+        MeasurementUnit.Centimeter => "cm",
+        MeasurementUnit.Meter => "m",
+        _ => "mm"
+    };
+
+    public static string GetAreaSuffix(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => "mm²",
+        MeasurementUnit.Centimeter => "cm²",
+        MeasurementUnit.Meter => "m²",
+        _ => "mm²"
+    };
+
+    public static string GetVolumeSuffix(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => "mm³",
+        MeasurementUnit.Centimeter => "cm³",
+        MeasurementUnit.Meter => "m³",
+        _ => "mm³"
+    };
+
+    public static float GetAreaMultiplier(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => 1f,
+        MeasurementUnit.Centimeter => 0.01f,      // 1cm² = 100mm²
+        MeasurementUnit.Meter => 0.000001f,       // 1m² = 1000000mm²
+        _ => 1f
+    };
+
+    public static float GetVolumeMultiplier(MeasurementUnit unit) => unit switch
+    {
+        MeasurementUnit.Millimeter => 1f,
+        MeasurementUnit.Centimeter => 0.001f,     // 1cm³ = 1000mm³
+        MeasurementUnit.Meter => 0.000000001f,    // 1m³ = 10^9 mm³
+        _ => 1f
+    };
+}
+
+/// <summary>
 /// Base class for all measurement results
 /// </summary>
 public abstract class MeasurementResult
@@ -50,7 +114,26 @@ public abstract class MeasurementResult
     public bool IsValid { get; set; }
     public string ErrorMessage { get; set; } = "";
 
+    /// <summary>
+    /// Get formatted result with default mm unit
+    /// </summary>
     public abstract string GetFormattedResult();
+
+    /// <summary>
+    /// Get formatted result with specified unit
+    /// </summary>
+    public virtual string GetFormattedResult(MeasurementUnit unit)
+    {
+        return GetFormattedResult(); // Default implementation
+    }
+
+    /// <summary>
+    /// Restore visualization for this measurement result
+    /// </summary>
+    public virtual void RestoreVisualization(Action<MeasurementResult> visualizer)
+    {
+        visualizer?.Invoke(this);
+    }
 }
 
 /// <summary>
@@ -73,7 +156,14 @@ public class DistanceMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Total: {TotalDistance:F3}mm\nX: {DistanceX:F3}mm\nY: {DistanceY:F3}mm\nZ: {DistanceZ:F3}mm";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Total: {TotalDistance * m:F3}{s}\nX: {DistanceX * m:F3}{s}\nY: {DistanceY * m:F3}{s}\nZ: {DistanceZ * m:F3}{s}";
     }
 }
 
@@ -121,7 +211,14 @@ public class HeightMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Axis: {Axis}\nMin: {MinHeight:F3}mm\nMax: {MaxHeight:F3}mm\nRange: {Range:F3}mm\nMean: {Mean:F3}mm\nStdDev: {StandardDeviation:F3}mm\nPoints: {PointCount:N0}";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Axis: {Axis}\nMin: {MinHeight * m:F3}{s}\nMax: {MaxHeight * m:F3}{s}\nRange: {Range * m:F3}{s}\nMean: {Mean * m:F3}{s}\nStdDev: {StandardDeviation * m:F3}{s}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -145,7 +242,16 @@ public class BoundingBoxMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Size: {Size.X:F3} x {Size.Y:F3} x {Size.Z:F3} mm\nVolume: {Volume:F3} mm³\nDiagonal: {DiagonalLength:F3}mm\nCenter: ({Center.X:F2}, {Center.Y:F2}, {Center.Z:F2})";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        var vm = MeasurementUnitHelper.GetVolumeMultiplier(unit);
+        var vs = MeasurementUnitHelper.GetVolumeSuffix(unit);
+        return $"Size: {Size.X * m:F3} x {Size.Y * m:F3} x {Size.Z * m:F3} {s}\nVolume: {Volume * vm:F3} {vs}\nDiagonal: {DiagonalLength * m:F3}{s}\nCenter: ({Center.X * m:F2}, {Center.Y * m:F2}, {Center.Z * m:F2})";
     }
 }
 
@@ -165,7 +271,14 @@ public class CentroidMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Centroid: ({Centroid.X:F3}, {Centroid.Y:F3}, {Centroid.Z:F3})\nPoint Count: {PointCount:N0}";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Centroid: ({Centroid.X * m:F3}, {Centroid.Y * m:F3}, {Centroid.Z * m:F3}) {s}\nPoint Count: {PointCount:N0}";
     }
 }
 
@@ -187,7 +300,18 @@ public class PointDensityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Density: {Density:F4} pts/mm³\nAvg Spacing: {AverageSpacing:F3}mm\nPoints: {PointCount:N0}\nVolume: {BoundingVolume:F3} mm³";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        var vm = MeasurementUnitHelper.GetVolumeMultiplier(unit);
+        var vs = MeasurementUnitHelper.GetVolumeSuffix(unit);
+        // Density needs inverse volume multiplier (pts/mm³ → pts/cm³ means divide by 0.001)
+        var densityValue = Density / vm;
+        return $"Density: {densityValue:F4} pts/{vs}\nAvg Spacing: {AverageSpacing * m:F3}{s}\nPoints: {PointCount:N0}\nVolume: {BoundingVolume * vm:F3} {vs}";
     }
 }
 
@@ -208,7 +332,14 @@ public class SurfaceAreaMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Surface Area: {SurfaceArea:F3} mm²\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea:F3} mm²";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var am = MeasurementUnitHelper.GetAreaMultiplier(unit);
+        var as_ = MeasurementUnitHelper.GetAreaSuffix(unit);
+        return $"Surface Area: {SurfaceArea * am:F3} {as_}\nTriangles: {TriangleCount:N0}\nAvg Triangle: {AverageTriangleArea * am:F3} {as_}";
     }
 }
 
@@ -231,7 +362,14 @@ public class PointToPlaneMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Distance: {Distance:F3}mm\nPoint: ({Point.X:F2}, {Point.Y:F2}, {Point.Z:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Distance: {Distance * m:F3}{s}\nPoint: ({Point.X * m:F2}, {Point.Y * m:F2}, {Point.Z * m:F2})\nPlane Normal: ({PlaneNormal.X:F2}, {PlaneNormal.Y:F2}, {PlaneNormal.Z:F2})";
     }
 }
 
@@ -257,7 +395,14 @@ public class FlatnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Flatness: {Flatness:F4}mm\nMax +Dev: {MaxPositiveDeviation:F4}mm\nMax -Dev: {MaxNegativeDeviation:F4}mm\nPoints: {PointCount:N0}";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Flatness: {Flatness * m:F4}{s}\nMax +Dev: {MaxPositiveDeviation * m:F4}{s}\nMax -Dev: {MaxNegativeDeviation * m:F4}{s}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -281,7 +426,14 @@ public class RoundnessMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Roundness: {Roundness:F4}mm\nRadius: {FittedRadius:F3}mm\nMax Dev: {MaxRadiusDeviation:F4}mm\nMin Dev: {MinRadiusDeviation:F4}mm\nCenter: ({Center.X:F2}, {Center.Y:F2}, {Center.Z:F2})";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Roundness: {Roundness * m:F4}{s}\nRadius: {FittedRadius * m:F3}{s}\nMax Dev: {MaxRadiusDeviation * m:F4}{s}\nMin Dev: {MinRadiusDeviation * m:F4}{s}\nCenter: ({Center.X * m:F2}, {Center.Y * m:F2}, {Center.Z * m:F2})";
     }
 }
 
@@ -306,7 +458,14 @@ public class CylindricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Cylindricity: {Cylindricity:F4}mm\nRadius: {FittedRadius:F3}mm\nMax Dev: {MaxRadiusDeviation:F4}mm\nMin Dev: {MinRadiusDeviation:F4}mm\nPoints: {PointCount:N0}";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Cylindricity: {Cylindricity * m:F4}{s}\nRadius: {FittedRadius * m:F3}{s}\nMax Dev: {MaxRadiusDeviation * m:F4}{s}\nMin Dev: {MinRadiusDeviation * m:F4}{s}\nPoints: {PointCount:N0}";
     }
 }
 
@@ -328,7 +487,14 @@ public class ParallelismMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Parallelism: {Parallelism:F4}mm\nAngle: {AngleBetweenPlanes:F4}°";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Parallelism: {Parallelism * m:F4}{s}\nAngle: {AngleBetweenPlanes:F4}°";
     }
 }
 
@@ -351,7 +517,14 @@ public class PerpendicularityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Perpendicularity: {Perpendicularity:F4}mm\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Perpendicularity: {Perpendicularity * m:F4}{s}\nActual Angle: {ActualAngle:F4}°\nDeviation: {AngleDeviation:F4}°";
     }
 }
 
@@ -375,7 +548,14 @@ public class ConcentricityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Concentricity: {Concentricity:F4}mm\nOffset: ({Offset.X:F3}, {Offset.Y:F3}, {Offset.Z:F3})\nCircle 1 R: {Circle1Radius:F3}mm\nCircle 2 R: {Circle2Radius:F3}mm";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Concentricity: {Concentricity * m:F4}{s}\nOffset: ({Offset.X * m:F3}, {Offset.Y * m:F3}, {Offset.Z * m:F3})\nCircle 1 R: {Circle1Radius * m:F3}{s}\nCircle 2 R: {Circle2Radius * m:F3}{s}";
     }
 }
 
@@ -400,7 +580,14 @@ public class CoaxialityMeasurement : MeasurementResult
 
     public override string GetFormattedResult()
     {
-        return $"Coaxiality: {Coaxiality:F4}mm\nAxis Offset: {AxisOffset:F4}mm\nAxis Angle: {AxisAngle:F4}°";
+        return GetFormattedResult(MeasurementUnit.Millimeter);
+    }
+
+    public override string GetFormattedResult(MeasurementUnit unit)
+    {
+        var m = MeasurementUnitHelper.GetMultiplier(unit);
+        var s = MeasurementUnitHelper.GetSuffix(unit);
+        return $"Coaxiality: {Coaxiality * m:F4}{s}\nAxis Offset: {AxisOffset * m:F4}{s}\nAxis Angle: {AxisAngle:F4}°";
     }
 }
 
