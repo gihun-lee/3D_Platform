@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using VPP.App.ViewModels;
 using VPP.Core.Interfaces;
+using VPP.Plugins.PointCloud.Models;
 using HelixToolkit.Wpf.SharpDX; // For camera types
 
 namespace VPP.App.Views;
@@ -926,6 +927,24 @@ public partial class MainWindow : Window
 
             Viewport3D.CaptureMouse();
             e.Handled = true;
+            return;
+        }
+
+        // Measurement point picking mode
+        if (ViewModel != null && ViewModel.IsMeasurementToolsVisible && ViewModel.ActiveMeasurementTool != MeasurementToolType.None)
+        {
+            var measurePos = e.GetPosition(Viewport3D);
+            var hitPoint = GetHitPoint(measurePos);
+
+            if (hitPoint != null)
+            {
+                ViewModel.AddMeasurementPoint(hitPoint.Value);
+                e.Handled = true;
+            }
+            else
+            {
+                ViewModel.StatusMessage = "Click on a point in the point cloud";
+            }
             return;
         }
 
