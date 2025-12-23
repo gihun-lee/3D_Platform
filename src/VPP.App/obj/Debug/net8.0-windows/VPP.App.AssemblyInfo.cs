@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VPP.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5633d016323069ea204e36000d0086991ba35a86")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e75b58ac48d186973bf4f57893cafa5f0a181a10")]
 [assembly: System.Reflection.AssemblyProductAttribute("VPP.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VPP.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
