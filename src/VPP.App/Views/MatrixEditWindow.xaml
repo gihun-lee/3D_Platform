@@ -1,0 +1,36 @@
+<Window x:Class="VPP.App.Views.MatrixEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit 4x4 Matrix" Height="260" Width="420"
+        WindowStartupLocation="CenterOwner"
+        Background="#2D2D2D">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <UniformGrid Rows="4" Columns="4" Margin="0,0,0,10">
+            <TextBox x:Name="M11" Margin="3"/>
+            <TextBox x:Name="M12" Margin="3"/>
+            <TextBox x:Name="M13" Margin="3"/>
+            <TextBox x:Name="M14" Margin="3"/>
+            <TextBox x:Name="M21" Margin="3"/>
+            <TextBox x:Name="M22" Margin="3"/>
+            <TextBox x:Name="M23" Margin="3"/>
+            <TextBox x:Name="M24" Margin="3"/>
+            <TextBox x:Name="M31" Margin="3"/>
+            <TextBox x:Name="M32" Margin="3"/>
+            <TextBox x:Name="M33" Margin="3"/>
+            <TextBox x:Name="M34" Margin="3"/>
+            <TextBox x:Name="M41" Margin="3"/>
+            <TextBox x:Name="M42" Margin="3"/>
+            <TextBox x:Name="M43" Margin="3"/>
+            <TextBox x:Name="M44" Margin="3"/>
+        </UniformGrid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Identity" Margin="0,0,10,0" Click="Identity_Click"/>
+            <Button Content="OK" Width="80" Margin="0,0,10,0" Click="Ok_Click"/>
+            <Button Content="Cancel" Width="80" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
